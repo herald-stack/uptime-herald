@@ -1,0 +1,228 @@
+{#
+  Uptime Herald - https://uptimeherald.org
+  Copyright (C) 2026 Uptime Herald Authors
+  SPDX-License-Identifier: AGPL-3.0-only
+
+  _style_mobile.html - Mobile layout CSS for the dashboard.
+-#}
+{# Mobile layout (< 1366px) — dashboard.html only, not kiosk.html.
+
+   This is a *structurally separate* build from the desktop `.layout` markup,
+   not a reflow of it. Below the width the fixed 360px sidebar + flexible
+   detail panel needs, the two-pane layout doesn't just get cramped, it stops
+   working outright -- the aggregate stats grid and the check-log's
+   fixed-pixel table columns both need real room. Rather than fight that with
+   an ever-growing pile of overrides, the mobile markup (`.mobile-shell` and
+   everything inside it, in dashboard.html) is its own build with its own JS
+   (dashboard-mobile.js). It borrows the desktop's classes/CSS custom
+   properties for visual identity (`.sidebar-header`, `.sidebar-footer`,
+   `.monitor-list`, `.monitor-row`, `.sidebar-filter`, `.metric-card`, etc.
+   are reused as-is; unscoped class selectors work in any container) rather
+   than sharing DOM structure or click handlers with the desktop path.
+
+   Breakpoint: 1366px, chosen deliberately (not the classic 768px tablet
+   breakpoint) -- desktop monitors are wider than that, so they get the
+   two-pane `.layout`, and everything else (phones, tablets in either
+   orientation, small laptops) gets `.mobile-shell`.
+
+   Both `.layout` and `.mobile-shell` are always present in the rendered
+   page; only one is ever visible at a time, chosen purely by this media
+   query — everything is built into the interface and shown/hidden,
+   rather than picking one client-side/server-side at load time. #}
+.mobile-shell { display: none; }
+{# .check-log-mobile and .detail-footer-mobile's own "hidden by
+   default" base rules live in _style_common.html, not here — see the
+   comment there for why (kiosk.html renders the same monitor.html
+   fragment as dashboard.html but doesn't include this file at all). #}
+
+@media (max-width: 1365px) {
+    .layout { display: none; }
+
+    .mobile-shell {
+        display: flex;
+        flex: 1;
+        min-width: 0;
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh; /* see body's rule in _style_common.html for why */
+        min-height: 0;
+    }
+
+    /* Header: always visible. On desktop this SVG only ever sits above
+       the 360px sidebar column; reusing that same element here would
+       mean fighting a positioning trade-off between "full width on
+       mobile" and "sidebar-width on desktop" on one shared node, so
+       this is its own element (same _uptimeherald_logo_svg.html include,
+       same .sidebar-header look) rather than the desktop header moved.
+       Doubles as the back-to-list control while the detail view is
+       showing — see dashboard-mobile.js's mobileGoHome(). */
+    .mobile-shell .sidebar-header { flex-shrink: 0; cursor: pointer; }
+    .mobile-shell.showing-detail .sidebar-header { border-bottom: 1px solid var(--border-main); }
+
+    /* List view: filters + monitor list + footer, all one scrolling
+       region — the footer should scroll away with everything else, not
+       sit pinned below an independently-scrolling list.
+       .monitor-list's shared rule (_style_common.html) gives it its own
+       flex:1 + overflow-y:auto for desktop's sidebar, where that's
+       correct — the monitor list scrolls independently of the fixed
+       legend/footer below it. Overridden back to normal block flow
+       here so .mobile-list-view itself is the one scrolling container
+       instead. */
+    .mobile-list-view {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        overflow-y: auto;
+        min-height: 0;
+    }
+    /* flex: 1 (not none) -- with only a few monitors configured, this keeps
+       the footer at the bottom of the screen instead of hugging the bottom of
+       the short list. .monitor-list has overflow: visible (unchanged), which
+       per the flexbox automatic-minimum-size rule means it can never shrink
+       below its own content's real height -- so flex:1 only does anything
+       when there's LESS content than available space (it grows to soak up
+       the leftover room, pushing the footer to the true bottom) and is a
+       no-op once there are enough monitors to fill or overflow the screen,
+       where the scroll-together behavior above takes over. */
+    .mobile-list-view .monitor-list {
+        flex: 1;
+        overflow: visible;
+    }
+
+    /* Detail view: hidden until a monitor is selected. Padding lives on
+       .detail-view (the actual content, mobile-scoped here rather than
+       touching the shared class -- desktop's #detail-panel already has its
+       own 1.5em padding, so adding more there would double it) rather than on
+       this outer scroll container. The footer is a sibling of .detail-view,
+       not nested in it, so padding on this container would inset the footer
+       on every side; padding one level down lets the footer span edge-to-edge
+       within its container. */
+    .mobile-detail-view {
+        display: none;
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+        min-height: 0;
+        background: var(--bg-main);
+    }
+    /* 0.75rem, not 1rem -- trimmed to help the check-log accordion
+       actually fit a 360px-wide phone alongside the fixed-width
+       time/status columns below.
+       flex: 1 -- same "hug the bottom instead of hugging short content"
+       approach as .monitor-list above; it requires .mobile-detail-view itself
+       to be a flex container when shown (see the showing-detail rule below,
+       display:flex + flex-direction: column) so .detail-view has something
+       to grow inside of. */
+    .mobile-detail-view .detail-view { padding: 0.75rem; flex: 1; }
+
+    .mobile-shell.showing-detail .mobile-list-view { display: none; }
+    .mobile-shell.showing-detail .mobile-detail-view {
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Overrides .detail-footer-mobile's base display:none (see top of
+       this file) -- only actually shown at mobile widths, restoring
+       .sidebar-footer's own display:flex for its internal layout. */
+    .detail-footer-mobile { display: flex; }
+
+    /* Stats: 3 clusters (Checks / Avg Uptime / Avg Latency) side by side
+       (desktop's .stats-clusters is a flex row), each with its own 2x2
+       metric-card grid. This holds up down to a real breakpoint, not just
+       "mobile" as a whole: the goal is to keep the 2x2 grids AND the
+       3-side-by-side layout for as long as they fit, and only stack below
+       that. Measured in a real browser, side by side holds down to ~630px
+       (the last card's right edge lands at 627px in a 630px box); below that,
+       overflow-x:hidden on .mobile-detail-view silently clips the rightmost
+       card instead of wrapping or scrolling. The threshold is the
+       conventional 768px tablet breakpoint, comfortably clear of that. */
+    @media (max-width: 767px) {
+        .mobile-detail-view .stats-clusters { flex-direction: column; }
+    }
+
+    /* Smaller latency graph on a narrow screen. The canvas itself
+       already redraws to fit its container on resize (monitor.html),
+       this just shrinks the box it's redrawing into. */
+    .mobile-detail-view #response-graph { height: 160px; }
+
+    /* Check log: the fixed-pixel-column table (needs ~490px minimum
+       before its last column even gets space) is replaced with an
+       accordion built from the same fetched JSON — see monitor.html's
+       renderChecksMobile(). */
+    .mobile-detail-view .check-log table { display: none; }
+    .check-log-mobile { display: block; }
+}
+
+/* --- Check-log accordion (native <details>/<summary>, no JS needed
+   for the expand/collapse mechanic itself) --- */
+.check-item {
+    border-bottom: 1px solid var(--border-table);
+}
+.check-item summary {
+    display: flex;
+    align-items: center;
+    /* 1.375rem, not 1.75rem -- trimmed to fit the fixed-width
+       time/status columns below within the 360px baseline. Still
+       +10px over the original 0.75rem, the low end of the original
+       gap size -- reduced just enough to fit, not undone. */
+    gap: 1.375rem;
+    padding: 0.65rem 0.25rem;
+    cursor: pointer;
+    list-style: none;
+}
+.check-item summary::-webkit-details-marker { display: none; }
+.check-item summary::after {
+    content: '+';
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    line-height: 1;
+    flex-shrink: 0;
+    /* Only the expand/collapse indicator gets pushed to the far edge --
+       date/time and status stay grouped together regardless of container
+       width. justify-content: space-between would distribute all 3 flex
+       children (time, status, and this pseudo-element) evenly across the
+       full row, putting visible daylight between the date/time and the
+       status on anything wider than a phone, such as a tablet. */
+    margin-left: auto;
+}
+.check-item[open] summary::after { content: '\2212'; }
+.check-item .check-time {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    /* Fixed floor so status lines up the same regardless of how wide any
+       given row's formatted date/time happens to be --
+       format_datetime(..., format="medium") in dashboard.py isn't a
+       constant-width format (e.g. "Sep 2, 2026, 8:04:56 PM" vs
+       "Jan 16, 2026, 12:41:32 PM"), it varies by day/hour digit count.
+       26ch comfortably covers English's medium format (23-25 chars
+       measured); Hack is monospace so ch is exact. min- (not a bare
+       width) lets an unusually long localized format still grow past
+       it rather than truncate — rare, and better than losing data. */
+    min-width: 26ch;
+}
+.check-item .check-status {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    flex-shrink: 0;
+    /* Same approach as .check-time's min-width, for the same reason: status
+       text isn't constant-width either -- "UP" vs "TIMEOUT" vs "FAILED" -- so
+       the +/- indicator's margin-left:auto would land at a different
+       x-position on every row depending on how long that row's status
+       happened to be. Real vocabulary (src/monitors/*.py) is
+       up/down/timeout/failed/MAINT/HTTP codes; "timeout" (7 chars) is the
+       longest. 8ch, trimmed to fit a 360px phone, still leaves 1 char of
+       buffer over "timeout" itself. */
+    min-width: 8ch;
+}
+.check-item .check-status.up { color: var(--status-up); }
+.check-item .check-status.down { color: var(--status-down); }
+.check-item .check-status.muted { color: var(--text-muted); font-style: italic; }
+.check-item-body {
+    padding: 0 0.25rem 0.75rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+.check-item-body div + div { margin-top: 0.3rem; }

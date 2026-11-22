@@ -1,0 +1,114 @@
+# Uptime Herald - https://uptimeherald.org
+# Copyright (C) 2026 Uptime Herald Authors
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# docker-compose-postgres.yaml - Development and CI stack: Uptime Herald with PostgreSQL.
+#
+services:
+  uptimeherald:
+    build: .
+    container_name: uptimeherald
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./config:/app/config:ro
+    environment:
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      # WARNING: DB_USER/DB_PASSWORD (and POSTGRES_ROOT_PASSWORD below)
+      # default to insecure, well-known values (uptimeherald/uptimeherald,
+      # changeme). These are fine for local/trusted-network use only;
+      # for any production or internet-reachable deployment, override
+      # via a .env file or real environment variables — do not run
+      # with the defaults.
+      - DB_BACKEND=postgres
+      - DB_HOST=${DB_HOST:-postgres}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_NAME=${DB_NAME:-uptimeherald}
+      - DB_USER=${DB_USER:-uptimeherald}
+      - DB_PASSWORD=${DB_PASSWORD:-uptimeherald}
+      - DB_POOL_MIN_SIZE=${DB_POOL_MIN_SIZE:-1}
+      - DB_POOL_MAX_SIZE=${DB_POOL_MAX_SIZE:-5}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # DNS — uncomment if containers have DNS resolution issues:
+    # dns:
+    #   - 9.9.9.9
+    #   - 149.112.112.112
+    restart: unless-stopped
+
+  # One-shot helper: copies the role-creation script out of the
+  # uptimeherald-postgres-init image into a volume the postgres service
+  # mounts as its init directory, then exits. Nothing to download or keep
+  # next to this file. The script only takes effect when the database volume
+  # is first created; running this again later is harmless.
+  postgres-init:
+    build:
+      context: .
+      dockerfile: docker/postgres-init/Dockerfile
+    container_name: uptimeherald-postgres-init
+    user: "0:0"
+    entrypoint: ["cp", "-f", "/app/postgres-init/01-create-app-role.sh", "/out/"]
+    volumes:
+      - postgres-init:/out
+    network_mode: none
+    read_only: true
+    cap_drop:
+      - ALL
+    restart: "no"
+
+  postgres:
+    # Pinned to a major version on purpose. PostgreSQL can't start a newer
+    # major against a data volume written by an older one, so changing
+    # this tag by itself leaves the database container refusing to start.
+    # To move to a newer major, run
+    #   ./scripts/upgrade-postgres.sh <major>
+    # from this directory: it dumps the database, swaps the data volume,
+    # restores, and checks the row counts (the dump is kept). Details:
+    # https://uptimeherald.org/docs/databases/
+    image: postgres:18
+    container_name: uptimeherald-postgres
+    # Mounted at /var/lib/postgresql (NOT .../data, which every prior
+    # major version used) -- 18+ images refuse to start against a
+    # volume mounted directly at .../data, since they now expect
+    # data to live in a major-version-specific subdirectory under
+    # /var/lib/postgresql, to support pg_ctlcluster-style in-place
+    # major upgrades.
+    volumes:
+      - postgres-data:/var/lib/postgresql
+      # Creates the app's own non-superuser role (DB_USER) and makes it
+      # the owner of DB_NAME, on first init only. The image has no
+      # equivalent of MARIADB_USER, and always makes POSTGRES_USER a
+      # superuser -- so, like MariaDB's root, that's a separate account
+      # the app never connects as. The script itself is copied out of the
+      # uptimeherald-postgres-init image by the postgres-init service below.
+      - postgres-init:/docker-entrypoint-initdb.d:ro
+    depends_on:
+      postgres-init:
+        condition: service_completed_successfully
+    environment:
+      # WARNING: insecure default credentials — see the warning above
+      # the app service's DB_* variables. Override in production.
+      - POSTGRES_DB=${DB_NAME:-uptimeherald}
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_ROOT_PASSWORD:-changeme}
+      # Read by the init script above, not by the postgres image itself.
+      - DB_USER=${DB_USER:-uptimeherald}
+      - DB_PASSWORD=${DB_PASSWORD:-uptimeherald}
+    healthcheck:
+      # The double check (2s apart) guards against the postgres
+      # image's own bootstrap-server restart during first-time
+      # initdb: pg_isready can briefly report ready against that
+      # temporary server just before it restarts as the real one,
+      # which would otherwise reset the app's first real connection.
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-uptimeherald} -d ${DB_NAME:-uptimeherald} && sleep 2 && pg_isready -U ${DB_USER:-uptimeherald} -d ${DB_NAME:-uptimeherald}"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  postgres-init:

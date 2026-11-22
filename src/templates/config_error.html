@@ -1,0 +1,66 @@
+{#
+  Uptime Herald - https://uptimeherald.org
+  Copyright (C) 2026 Uptime Herald Authors
+  SPDX-License-Identifier: AGPL-3.0-only
+
+  config_error.html - The page shown when the configuration is invalid.
+-#}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uptime Herald — Configuration Error</title>
+    <link rel="icon" type="image/png" href="/static/png/uptime-herald-favicon.png">
+    <style>
+{% include "_style_common.html" %}
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .config-error-card {
+            max-width: 40rem;
+            margin: 1.5rem;
+            padding: 2rem;
+            background: var(--bg-cards);
+            border: 1px solid var(--status-down);
+            border-radius: 6px;
+        }
+        .config-error-card h1 {
+            margin: 0 0 1rem;
+            font-size: 1.25rem;
+            color: var(--status-down);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .config-error-message {
+            font-family: 'Hack', monospace;
+            background: var(--bg-input);
+            border: 1px solid var(--border-main);
+            border-radius: 4px;
+            padding: 0.75rem 1rem;
+            color: var(--text-main);
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .config-error-hint {
+            margin-top: 1rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="config-error-card">
+        <h1>&#9888;&#65039; {% trans %}Configuration Error{% endtrans %}</h1>
+        <div class="config-error-message">{{ error_message }}</div>
+        <p class="config-error-hint">
+            {% trans %}This page can't load until the configuration is fixed. Once it is, it will recover automatically on the next request — no restart needed.{% endtrans %}
+        </p>
+    </div>
+</body>
+</html>

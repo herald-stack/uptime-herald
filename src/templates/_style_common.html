@@ -1,0 +1,472 @@
+{#
+  Uptime Herald - https://uptimeherald.org
+  Copyright (C) 2026 Uptime Herald Authors
+  SPDX-License-Identifier: AGPL-3.0-only
+
+  _style_common.html - CSS shared by the dashboard, kiosk, and monitor pages.
+-#}
+{# Shared CSS for dashboard.html, kiosk.html, and monitor.html.
+
+   The CSS shared by all three pages lives here, so a change is made in one
+   place. Properties that render identically everywhere live here; properties
+   that legitimately differ per page are set as small overrides in each page's
+   own remaining <style> block, after this include, so cascade order still
+   gives each page exactly the value it needs.
+
+   monitor.html's own detail-view-only rules also live here rather than in
+   monitor.html itself: monitor.html is an AJAX-fetched fragment re-injected
+   into #detail-panel on every monitor click and (in kiosk mode) every
+   rotation tick, and a <style> tag inside that fragment gets re-parsed and
+   left in the DOM on every single injection, uncleaned, for as long as the
+   page stays open -- a real unbounded-growth concern for a kiosk display
+   meant to run continuously. Defining these rules once, here, in the
+   parent page's own <head>, means monitor.html needs no <style> tag of its
+   own.
+
+   Legend swatches: dashboard/kiosk's sidebar legend and monitor.html's bar
+   legend have genuinely different sizes (8px/0.25rem gap vs 10px/0.3rem gap)
+   for their `.legend-item`/`.legend-swatch` rules, so both are scoped here
+   under their real container (`.sidebar-legend` / `.bar-legend`, which the
+   markup already nests them under). Sharing one file therefore doesn't make
+   one of the two wrong. #}
+@font-face {
+    font-family: 'Ubuntu';
+    src: url('/static/fonts/ubuntu-500.woff2') format('woff2');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Ubuntu';
+    src: url('/static/fonts/ubuntu-700.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Hack';
+    src: url('/static/fonts/hack-regular.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Hack';
+    src: url('/static/fonts/hack-bold.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Hack';
+    src: url('/static/fonts/hack-italic.woff2') format('woff2');
+    font-weight: 400;
+    font-style: italic;
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Hack';
+    src: url('/static/fonts/hack-bolditalic.woff2') format('woff2');
+    font-weight: 700;
+    font-style: italic;
+    font-display: swap;
+}
+:root {
+    --bg-page: {{ theme.backgrounds.page }};
+    --bg-header: {{ theme.backgrounds.header }};
+    --bg-list-row: {{ theme.backgrounds.list_row }};
+    --bg-list-row-hover: {{ theme.backgrounds.list_row_hover }};
+    --bg-main: {{ theme.backgrounds.main }};
+    --bg-cards: {{ theme.backgrounds.cards }};
+    --bg-input: {{ theme.backgrounds.input }};
+    --bg-footer: {{ theme.backgrounds.footer }};
+    --text-main: {{ theme.text.main }};
+    --text-muted: {{ theme.text.muted }};
+    --text-accent: {{ theme.text.accent }};
+    --link-color: {{ theme.links.color }};
+    --link-hover-line: {{ theme.links.hover_line }};
+    --border-main: {{ theme.borders.main }};
+    --border-accent: {{ theme.borders.accent }};
+    --border-table: {{ theme.borders.table }};
+    --border-dropdown: {{ theme.borders.dropdown }};
+    --status-up: {{ theme.status.up }};
+    --status-down: {{ theme.status.down }};
+    --status-mixed: {{ theme.status.mixed }};
+    --status-nodata: {{ theme.status.nodata }};
+    --graph-lines: {{ theme.graphs.lines }};
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+    font-family: 'Hack', monospace;
+    background: var(--bg-page);
+    color: var(--text-main);
+    display: flex;
+    overflow: hidden;
+    height: 100vh;
+    /* 100vh assumes the browser's own chrome (address bar, etc.) is
+       hidden -- on a real phone where it isn't, actual visible height
+       is smaller, and anything relying on 100vh to size itself (the
+       mobile footer, in particular, on Firefox Android) ends up sized
+       past what's actually visible. 100dvh tracks the real visible
+       viewport as chrome shows/hides.
+       Layered after the vh line, not replacing it, so browsers without
+       dvh support (a real but shrinking minority) keep the old
+       behavior instead of getting no height rule at all. */
+    height: 100dvh;
+}
+h3 { font-family: 'Ubuntu', sans-serif; font-weight: 500; color: var(--text-main); text-transform: uppercase; margin: 30px 0 10px; }
+.sidebar-header {
+    padding: 23px 0 17px 0;
+    border-bottom: 0;
+    background: var(--bg-header);
+    flex-shrink: 0;
+    text-align: center;
+}
+.sidebar-header .uptimeherald-logo {
+    color: var(--text-accent);
+    height: 20px;
+    width: auto;
+    display: inline-block;
+}
+.sidebar-header a { color: var(--text-accent); text-decoration: none; }
+.sidebar-header .uptimeherald-logo .uptimeherald-logo-mark { fill: currentColor; }
+.sidebar-header .uptimeherald-logo .uptimeherald-logo-text { fill: var(--text-main); }
+.layout {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+}
+.sidebar {
+    width: 360px;
+    flex-shrink: 0;
+    border-right: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+.monitor-list {
+    flex: 1;
+    overflow-y: auto;
+    margin-top: 0;
+}
+#detail-panel {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-width: 0;
+    background: var(--bg-main);
+    border-left: 2px solid var(--border-main);
+}
+.monitor-row {
+    padding: 0.6rem 0.75rem;
+    cursor: pointer;
+    border-left: 3px solid var(--status-up);
+    transition: background 0.15s;
+    border-radius: 5px 0 0 5px;
+    border-top: 1px solid var(--border-main);
+    border-bottom: 1px solid var(--border-main);
+    margin-bottom: 3px;
+    background: var(--bg-list-row);
+}
+.monitor-row:hover { background: var(--bg-list-row-hover); }
+.monitor-row.selected {
+    background: var(--bg-list-row-hover);
+}
+.monitor-row.down { background: var(--status-down); border-left-color: var(--status-down); }
+.monitor-row.down.selected {
+    background: var(--status-down);
+}
+/* An active monitor that's never actually been checked yet (health
+   "nodata", see dashboard.py's _gather_one) -- without this, it falls
+   through to .monitor-row's own bare default border-left color
+   (--status-up, green), implying a confirmed-healthy state nothing
+   has actually confirmed. Matches the existing --status-nodata
+   color already used for the same concept elsewhere in this UI (the
+   uptime bar strip, the legend swatch) rather than a new one. */
+.monitor-row.nodata { border-left-color: var(--status-nodata); }
+.monitor-row .name-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.35rem;
+}
+.monitor-row .name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.monitor-row .uptime-pct {
+    font-family: 'Hack', monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    white-space: nowrap;
+    margin-left: 0.5rem;
+}
+.monitor-row.down .name { color: #fff; }
+.monitor-row.inactive {
+    opacity: 0.5;
+    background: var(--bg-list-row);
+    border-left-color: var(--status-nodata);
+}
+/* .inactive's own background (identical to the base, unselected
+   background) otherwise wins over both :hover and .selected here --
+   same specificity as .selected (2 classes each), HIGHER than :hover
+   (effectively 1 class + a pseudo-class) -- so without this, an
+   inactive row with no other color of its own (nodata, or genuinely
+   up) shows no hover/click feedback at all.
+   :not(.down) on BOTH keeps this scoped to that gap -- a monitor
+   that's both inactive AND has genuine down history keeps its
+   existing (already visually distinct, unflagged) red .down.selected
+   treatment; this only covers rows with nothing else already
+   covering the interactive states. :not(.down) is needed on the :hover
+   rule too, not just .selected -- a user's cursor is still hovering
+   right after a click in any real browser, so both states are true
+   simultaneously; :hover alone (specificity 0,3,0) would otherwise tie
+   .down.selected (also 0,3,0) and win the tie purely by coming later in
+   this file, incorrectly overriding the red. */
+.monitor-row.inactive:hover:not(.down),
+.monitor-row.inactive.selected:not(.down) {
+    background: var(--bg-list-row-hover);
+}
+.monitor-row.inactive .name { font-style: italic; }
+.monitor-row.inactive .uptime-pct {
+    font-style: italic;
+    color: var(--text-muted);
+}
+.row-bars {
+    display: flex;
+    gap: 2px;
+    overflow: hidden;
+    justify-content: center;
+    background: var(--bg-list-row);
+    border: 1px solid var(--bg-list-row);
+}
+.row-bars .bar {
+    width: 8px;
+    height: 14px;
+    flex-shrink: 0;
+}
+.bar.up { background: var(--status-up); }
+.bar.down { background: var(--status-down); }
+.bar.mixed { background: var(--status-mixed); }
+.bar.nodata { background: var(--status-nodata); }
+.sidebar-legend {
+    display: flex; gap: 0.8rem; padding: 0.5rem 0.75rem;
+    font-size: 0.65rem; color: var(--text-muted);
+    justify-content: center;
+}
+.sidebar-legend .legend-item { display: flex; align-items: center; gap: 0.25rem; }
+.sidebar-legend > span:nth-child(5) {
+    border-left: 1px solid var(--text-main);
+    padding-left: 12px;
+}
+.sidebar-legend .legend-swatch {
+    display: inline-block; width: 8px; height: 8px;
+    border-radius: 1px;
+}
+.sidebar-legend .legend-swatch.up { background: var(--status-up); }
+.sidebar-legend .legend-swatch.down { background: var(--status-down); }
+.sidebar-legend .legend-swatch.mixed { background: var(--status-mixed); }
+.sidebar-legend .legend-swatch.nodata { background: var(--status-nodata); }
+.sidebar-footer {
+    border-top: 1px solid var(--border-main);
+    background: var(--bg-footer);
+    margin-top: 8px;
+    padding: 18px 12px 20px;
+    font-size: 0.65rem; color: var(--text-muted);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.footer-version {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+.empty-state {
+    color: var(--text-muted);
+    font-style: italic;
+    padding: 2rem;
+    text-align: center;
+}
+.check-log h3 {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+}
+.check-log table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+.check-log th, .check-log td {
+    text-align: left;
+    border-bottom: 1px solid var(--border-table);
+}
+#checks-tbody td { padding: 10px 8px; }
+.check-log th {
+    color: var(--text-main);
+    font-family: 'Ubuntu', sans-serif;
+    font-weight: 500;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    padding: 10px 8px;
+}
+/* Default (all-monitors) check log view: Monitor, Status, Date/Time, Latency, Details */
+.check-log th:nth-child(1), .check-log td:nth-child(1) { width: 320px; }
+.check-log th:nth-child(2), .check-log td:nth-child(2) { width: 90px; }
+.check-log th:nth-child(3), .check-log td:nth-child(3) { width: 290px; }
+.check-log th:nth-child(4), .check-log td:nth-child(4) { width: 110px; }
+.check-log th:nth-child(5), .check-log td:nth-child(5) { width: calc(100% - 810px); }
+.check-log td.up { color: var(--status-up); text-transform: uppercase; }
+.check-log td.down { color: var(--status-down); text-transform: uppercase; }
+.check-log td.muted { color: var(--text-muted); font-style: italic; }
+.check-log .pagination {
+    display: flex;
+    gap: 0.4rem;
+    align-items: center;
+    font-size: 0.85rem;
+}
+.check-log .pagination button {
+    background: var(--bg-input);
+    color: var(--text-main);
+    border: 1px solid transparent;
+    padding: 0.25rem 0.6rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+.check-log .pagination button:hover {
+    border-color: var(--border-accent);
+}
+.check-log .pagination button:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+.check-log .pagination .page-info {
+    color: var(--text-muted);
+    margin: 0 0.5rem;
+}
+.check-log .pagination .page-input {
+    width: 3rem;
+    background: var(--bg-input);
+    color: var(--text-main);
+    border: 0;
+    padding: 0.25rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    text-align: center;
+    margin: 0 0.3rem;
+}
+.agg-stats { margin-bottom: 1.5rem; }
+.agg-stats h3 { font-size: 0.95rem; margin-top: 0; }
+.stats-clusters {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+.stat-cluster { flex: 1; }
+.cluster-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin: 0 0 0.5rem 0;
+}
+.cluster-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+}
+.metric-card {
+    background: var(--bg-cards);
+    padding: 0.75rem;
+    text-align: center;
+    border: 1px solid var(--border-accent);
+    border-radius: 5px;
+}
+.metric-card .value { font-size: 1.5rem; font-weight: bold; }
+.metric-card .label { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem; text-transform: uppercase; }
+.metric-card.down { background: var(--status-down) !important; border: 1px solid var(--status-down) !important; }
+.metric-card.down .value { color: #1a1a1a; }
+.metric-card.down .label { color: #1a1a1a; }
+.metric-card.up { background: var(--status-up) !important; border: 1px solid var(--status-up) !important; }
+.metric-card.up .value { color: #1a1a1a; }
+.metric-card.up .label { color: #1a1a1a; }
+
+/* --- Monitor detail view (monitor.html, injected via AJAX) --- */
+.detail-view { max-width: 100%; font-family: 'Hack', monospace; }
+.detail-header { margin-bottom: 1rem; }
+.detail-title { font-family: 'Ubuntu', sans-serif; font-size: 2rem; font-weight: 500; text-transform: uppercase; line-height: 100%; margin: -3px 0 3px; }
+.detail-title .status-value { font-size: 2rem; font-weight: 500; }
+.detail-url { margin-top: 0.25rem; color: var(--text-muted); font-size: 1rem; word-break: break-all; }
+.detail-url a { color: var(--link-color); text-decoration: none; }
+.detail-url a:hover { text-decoration: underline var(--link-hover-line); }
+.detail-tags { margin-top: 0.25rem; color: var(--text-muted); font-size: 0.875rem; }
+.detail-label { text-transform: uppercase; }
+.detail-interval-line { margin-top: 0.25rem; color: var(--text-muted); font-size: 0.875rem; }
+.detail-expected-status { margin-top: 0.25rem; color: var(--text-muted); font-size: 0.875rem; }
+.status-value.status-up { color: var(--status-up); }
+.status-value.status-down { color: var(--status-down); }
+/* Never-checked monitors reach the detail view as `nodata` now, matching
+   the sidebar's own 3-way health field. Grey rather than the default text
+   color for the same reason .monitor-row.nodata is grey: green would imply
+   a healthy state nothing has confirmed, red a failure nothing observed. */
+.status-value.status-nodata { color: var(--status-nodata); }
+.detail-bar-section { margin-bottom: 1.5rem; }
+.bar-label {
+    display: flex; justify-content: space-between;
+    font-size: 0.7rem; color: var(--text-muted); margin-bottom: 0.25rem;
+    text-transform: uppercase;
+}
+.detail-bars {
+    display: flex; gap: 2px; overflow: hidden;
+    justify-content: flex-end;
+    height: 30px;
+}
+.detail-bars .bar {
+    width: 8px; height: 100%; flex-shrink: 0; border-radius: 1px;
+}
+.bar-legend {
+    display: flex; gap: 1rem; margin-top: 0.5rem;
+    font-size: 0.7rem; color: var(--text-muted);
+    justify-content: flex-start;
+}
+.bar-legend .legend-note { margin-left: auto; }
+.bar-legend .legend-item { display: flex; align-items: center; gap: 0.3rem; }
+.bar-legend .legend-swatch {
+    display: inline-block; width: 10px; height: 10px;
+    border-radius: 1px;
+}
+.bar-legend .legend-swatch.up { background: var(--status-up); }
+.bar-legend .legend-swatch.down { background: var(--status-down); }
+.bar-legend .legend-swatch.mixed { background: var(--status-mixed); }
+.bar-legend .legend-swatch.nodata { background: var(--status-nodata); }
+.graph-section { margin-bottom: 2em; }
+#response-graph {
+    width: 100%; height: 200px; display: block;
+    background: var(--bg-cards); border-radius: 6px;
+    border: 1px solid var(--border-accent);
+}
+/* Detail view check log: Date/Time, Status, Latency, Details (no Monitor column) */
+.detail-view th:nth-child(1), .detail-view td:nth-child(1) { width: 290px; }
+.detail-view th:nth-child(2), .detail-view td:nth-child(2) { width: 90px; }
+.detail-view th:nth-child(3), .detail-view td:nth-child(3) { width: 110px; }
+.detail-view th:nth-child(4), .detail-view td:nth-child(4) { width: calc(100% - 490px); }
+
+/* .check-log-mobile (the check-log accordion) and .detail-footer-mobile
+   are part of monitor.html, the fragment BOTH dashboard.html and
+   kiosk.html inject into their detail panel on every monitor click/
+   rotation tick. Their "only show at mobile widths" override lives in
+   _style_mobile.html (included by dashboard.html only, see
+   _style_mobile.html's own top-of-file comment for the full reasoning),
+   but this base "hidden by default" rule has to live somewhere BOTH
+   pages actually load, or kiosk.html (which never includes
+   _style_mobile.html, deliberately -- it's not responsive) renders them
+   completely unstyled instead of hidden, with the accordion markup
+   showing alongside the real table. */
+.check-log-mobile { display: none; }
+.detail-footer-mobile { display: none; }

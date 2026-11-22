@@ -1,0 +1,38 @@
+# Uptime Herald - https://uptimeherald.org
+# Copyright (C) 2026 Uptime Herald Authors
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# ruff.toml - Ruff lint settings.
+#
+[lint.per-file-ignores]
+# pytest relies on bare `assert`; that's idiomatic here, not a real S101 finding.
+# Test fixtures also use throwaway fake credentials/bind addresses that trip
+# S105/S106/S104 as false positives (S106 is the same fake credential passed
+# as a keyword argument, as in the push alert tests) outside a test context. Long parametrized
+# test data/assertions are also fine to leave unwrapped (E501). Fixtures
+# imported from another test module (a common cross-file pytest pattern here)
+# look like unused imports (F401) and then like redefinitions (F811) every
+# time a test function takes that fixture as a parameter — both false
+# positives, since ruff doesn't understand pytest's fixture injection.
+# S603 joins the list for the same reason: a couple of tests shell out to
+# re-run the interpreter or drive docker compose, always with a
+# fixed, locally-constructed argument list — never with untrusted input.
+"tests/*" = ["S101", "S105", "S106", "S104", "S603", "E501", "F401", "F811"]
+
+# The two backend modules build their SQL with f-strings, but every
+# interpolation is either a fixed module-level SQL fragment (e.g.
+# _IS_UP_SQL, _EXCLUDE_VERIFYING_SQL) or a dynamically-sized batch of
+# placeholders for an IN (...) clause — never untrusted data. All actual
+# values (monitor_name, dates, the IN-clause values themselves) go through
+# parameterized args via execute(sql, params), never directly into the SQL
+# text. Not a real SQL injection vector, just a pattern ruff's S608 can't
+# distinguish from an unsafe one.
+#
+# The ignores below name these two modules rather than src/db.py, which is a
+# dispatcher containing no SQL at all.
+# The upgrade-path tests build their seed SQL from constants defined in the
+# file itself (row counts, a fixed account name) -- nothing external.
+"tests/test_upgrade_paths.py" = ["S608"]
+
+"src/db_mariadb.py" = ["S608"]
+"src/db_postgres.py" = ["S608"]

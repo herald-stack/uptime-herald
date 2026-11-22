@@ -1,0 +1,79 @@
+# Uptime Herald - https://uptimeherald.org
+# Copyright (C) 2026 Uptime Herald Authors
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# docker-compose-mariadb.yaml - Development and CI stack: Uptime Herald with MariaDB.
+#
+services:
+  uptimeherald:
+    build: .
+    container_name: uptimeherald
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./config:/app/config:ro
+    environment:
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      # WARNING: DB_USER/DB_PASSWORD (and MARIADB_ROOT_PASSWORD below)
+      # default to insecure, well-known values (uptimeherald/uptimeherald,
+      # changeme). These are fine for local/trusted-network use only.
+      # For any production or internet-reachable deployment, override
+      # them via a .env file or real environment variables — do not
+      # run with the defaults.
+      - DB_BACKEND=mariadb
+      - DB_HOST=${DB_HOST:-mariadb}
+      - DB_PORT=${DB_PORT:-3306}
+      - DB_NAME=${DB_NAME:-uptimeherald}
+      - DB_USER=${DB_USER:-uptimeherald}
+      - DB_PASSWORD=${DB_PASSWORD:-uptimeherald}
+      - DB_POOL_MIN_SIZE=${DB_POOL_MIN_SIZE:-1}
+      - DB_POOL_MAX_SIZE=${DB_POOL_MAX_SIZE:-5}
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    # DNS — uncomment if containers have DNS resolution issues:
+    # dns:
+    #   - 9.9.9.9
+    #   - 149.112.112.112
+    restart: unless-stopped
+
+  mariadb:
+    # `latest` follows MariaDB's newest release, so you get new versions
+    # as they ship. Some of those are short-term releases that are
+    # supported for only a few months; the app will warn you before your
+    # version stops being supported.
+    # If you'd rather stay on a long-term-support series, pin one:
+    #   image: mariadb:lts      (the current LTS series, moves to the next LTS)
+    #   image: mariadb:12.3     (stay on exactly this series)
+    # Supported versions and how to move between them:
+    # https://uptimeherald.org/docs/databases/
+    image: mariadb:latest
+    container_name: uptimeherald-mariadb
+    volumes:
+      - mariadb-data:/var/lib/mysql
+    environment:
+      # WARNING: insecure default credentials — see the warning above
+      # the app service's DB_* variables. Override in production.
+      - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD:-changeme}
+      - MARIADB_DATABASE=${DB_NAME:-uptimeherald}
+      - MARIADB_USER=${DB_USER:-uptimeherald}
+      - MARIADB_PASSWORD=${DB_PASSWORD:-uptimeherald}
+      # Runs mariadb-upgrade automatically against an existing data
+      # directory whenever this image's version is newer than what
+      # last wrote it -- a no-op on a fresh volume or an unchanged
+      # version, but without it a major-version image bump (e.g.
+      # 12 -> 13) silently leaves old-format system tables in
+      # place instead of upgrading them. MariaDB's own docs call this
+      # safe to just always leave on.
+      - MARIADB_AUTO_UPGRADE=1
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  mariadb-data:

@@ -1,0 +1,521 @@
+{#
+  Uptime Herald - https://uptimeherald.org
+  Copyright (C) 2026 Uptime Herald Authors
+  SPDX-License-Identifier: AGPL-3.0-only
+
+  monitor.html - The monitor detail panel.
+-#}
+{# Detail panel fragment — injected into #detail-panel via AJAX.
+   Relies on CSS custom properties defined in dashboard.html :root. #}
+<div class="detail-view" data-monitor="{{ monitor.name }}">
+    <header class="detail-header">
+        <div class="detail-header-left">
+            <h2 class="detail-title">{{ monitor.name }} <span class="status-value status-{{ monitor.display_status }}">({{ monitor.display_status | upper }})</span></h2>
+            {% if monitor.target %}
+            <div class="detail-url">{% if monitor.type == 'http' and monitor.target_is_safe_link %}<a href="{{ monitor.target }}" target="_blank" rel="noopener noreferrer" style="color: var(--link-color);">{{ monitor.target }}</a>{% else %}<span class="detail-label">{{ monitor.type }}:</span> {{ monitor.target }}{% endif %}</div>
+            {% endif %}
+            {% if monitor.expected_status %}
+            <div class="detail-expected-status"><span class="detail-label">{% trans %}Expected status:{% endtrans %}</span> {{ monitor.expected_status }}</div>
+            {% endif %}
+            <div class="detail-interval-line"><span class="detail-label">Interval:</span> {{ monitor.interval_minutes }} MINS{% if monitor.interval_is_default %} (GLOBAL){% else %} (MONITOR){% endif %}</div>
+            {% if monitor.tags %}
+            <div class="detail-tags"><span class="detail-label">Tags:</span> {{ monitor.tags | join(' · ') | upper }}</div>
+            {% endif %}
+        </div>
+    </header>
+
+    <h3>{% trans %}Monitor Stats{% endtrans %}</h3>
+    <div class="stats-clusters">
+        <div class="stat-cluster">
+            <h3 class="cluster-label">{% trans %}CHECKS{% endtrans %}</h3>
+            <div class="cluster-grid">
+                <div class="metric-card{% if monitor.display_status == 'up' %} up{% endif %}">
+                    <div class="value">{{ monitor.total_up }}</div>
+                    <div class="label">{% trans %}UP{% endtrans %}</div>
+                </div>
+                <div class="metric-card{% if monitor.display_status == 'down' %} down{% endif %}">
+                    <div class="value">{{ monitor.total_down }}</div>
+                    <div class="label">{% trans %}DOWN{% endtrans %}</div>
+                </div>
+                <div class="metric-card">
+                    <div class="value">{{ monitor.total_timeout }}</div>
+                    <div class="label">{% trans %}TIMEOUT{% endtrans %}</div>
+                </div>
+                <div class="metric-card">
+                    <div class="value">{{ monitor.outages }}</div>
+                    <div class="label">{% trans %}OUTAGES{% endtrans %}</div>
+                </div>
+            </div>
+        </div>
+        <div class="stat-cluster">
+            <h3 class="cluster-label">{% trans %}AVG UPTIME{% endtrans %}</h3>
+            <div class="cluster-grid">
+                <div class="metric-card">
+                    <div class="value">{{ ("%." ~ uptime_decimals ~ "f")|format(agg_stats.uptime_pct["24h"]) }}%</div>
+                    <div class="label">24 Hours</div>
+                </div>
+                <div class="metric-card">
+                    <div class="value">{{ ("%." ~ uptime_decimals ~ "f")|format(agg_stats.uptime_pct["7d"]) }}%</div>
+                    <div class="label">7 Days</div>
+                </div>
+                <div class="metric-card">
+                    <div class="value">{{ ("%." ~ uptime_decimals ~ "f")|format(agg_stats.uptime_pct["30d"]) }}%</div>
+                    <div class="label">30 Days</div>
+                </div>
+                <div class="metric-card">
+                    <div class="value">{{ ("%." ~ uptime_decimals ~ "f")|format(agg_stats.uptime_pct[stats_period_key]) }}%</div>
+                    <div class="label">{{ stats_period_days }} Days</div>
+                </div>
+            </div>
+        </div>
+        <div class="stat-cluster">
+            <h3 class="cluster-label">{% trans %}AVG LATENCY{% endtrans %}</h3>
+            <div class="cluster-grid">
+                <div class="metric-card">
+                    <div class="value">{{ ("%." ~ latency_decimals ~ "f")|format(agg_stats.avg_latency["24h"]) }}ms</div>
+                    <div class="label">24 Hours</div>
+                </div>
+                <div class="metric-card">
+                    <div class="value">{{ ("%." ~ latency_decimals ~ "f")|format(agg_stats.avg_latency["7d"]) }}ms</div>
+                    <div class="label">7 Days</div>
+                </div>
+                <div class="metric-card">
+                    <div class="value">{{ ("%." ~ latency_decimals ~ "f")|format(agg_stats.avg_latency["30d"]) }}ms</div>
+                    <div class="label">30 Days</div>
+                </div>
+                <div class="metric-card">
+                    <div class="value">{{ ("%." ~ latency_decimals ~ "f")|format(agg_stats.avg_latency[stats_period_key]) }}ms</div>
+                    <div class="label">{{ stats_period_days }} Days</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h3>{% trans %}Uptime{% endtrans %}</h3>
+    <div class="detail-bar-section">
+        <div class="bar-label">
+            <span>{% trans %}OLDER{% endtrans %}</span>
+            <span>{% trans %}NOW{% endtrans %}</span>
+        </div>
+        <div class="detail-bars">
+            {% for bar in bars | reverse %}
+            <div class="bar {{ bar.status }}"
+                 title="{{ bar.hour_display }} – {{ bar.hour_display_end }} — {{ bar.status }}"></div>
+            {% endfor %}
+        </div>
+        <div class="bar-legend">
+            <span class="legend-item"><span class="legend-swatch up"></span>{% trans %}UP{% endtrans %}</span>
+            <span class="legend-item"><span class="legend-swatch down"></span>{% trans %}DOWN{% endtrans %}</span>
+            <span class="legend-item"><span class="legend-swatch mixed"></span>{% trans %}MIXED{% endtrans %}</span>
+            <span class="legend-item"><span class="legend-swatch nodata"></span>{% trans %}NO DATA{% endtrans %}</span>
+            <span class="legend-note">{% trans %}1 BAR = 1 HOUR{% endtrans %}</span>
+        </div>
+    </div>
+
+    <div class="graph-section">
+        <h3>{% trans count=latency_graph_days %}Latency (last {{ count }} day){% pluralize count %}Latency (last {{ count }} days){% endtrans %}</h3>
+        <canvas id="response-graph" width="800" height="200"></canvas>
+    </div>
+
+    <div class="check-log">
+        <table>
+            <thead>
+                <tr>
+                    <th>{% trans %}Date / Time{% endtrans %}</th>
+                    <th>{% trans %}Status{% endtrans %}</th>
+                    <th>{% trans %}Latency{% endtrans %}</th>
+                    <th>{% trans %}Details{% endtrans %}</th>
+                </tr>
+            </thead>
+            <tbody id="checks-tbody">
+                <tr><td colspan="4" class="muted">{% trans %}Loading…{% endtrans %}</td></tr>
+            </tbody>
+        </table>
+        {# Mobile-only accordion built from the same fetched JSON as the
+           table above — see renderChecksMobile() below and
+           _style_mobile.html for which one's actually visible. One
+           shared #pagination below both; only the visible one
+           contributes layout height, so it always ends up positioned
+           right under whichever content is showing. #}
+        <div class="check-log-mobile" id="checks-mobile"></div>
+        <div class="pagination" id="pagination"></div>
+    </div>
+</div>
+{# Mobile-only — this fragment gets injected into BOTH desktop's
+   #detail-panel and mobile's #mobile-detail-view (same fetch, same
+   HTML, see selectMonitor()/selectMonitorMobile()), so this has to be
+   hidden by default (see .detail-footer-mobile's base rule in
+   _style_mobile.html) rather than only appearing when the mobile JS
+   happens to be the one that injected it — desktop's #detail-panel
+   already has its own persistent sidebar footer, it doesn't need a
+   second one duplicated into the detail content itself. On mobile,
+   this scrolls with the rest of #mobile-detail-view's content rather
+   than sitting pinned — same as the list view's own footer. #}
+<div class="sidebar-footer detail-footer-mobile">
+    <div class="footer-links">
+        <a href="https://uptimeherald.org/docs/">{% trans %}Docs{% endtrans %}</a>
+        <a href="https://uptimeherald.org/license/">{% trans %}License{% endtrans %}</a>
+    </div>
+    <div class="footer-version">v{{ version }}</div>
+</div>
+
+{# All CSS this fragment needs (.detail-view*, .check-log*, .pagination*,
+   .metric-card*, etc.) lives in _style_common.html, included once by the
+   parent page's own <head> (dashboard.html / kiosk.html) rather than
+   redeclared here. This fragment gets re-injected into #detail-panel on
+   every monitor click and, in kiosk mode, on every rotation tick -- a
+   <style> tag here would get re-parsed and left in the DOM, uncleaned, on
+   every single injection. #}
+
+<script>
+(function() {
+    // This fragment's element ids are NOT unique once it's injected.
+    // dashboard.html carries its own #checks-tbody and #pagination
+    // inside #detail-panel; on desktop the fragment REPLACES that
+    // panel's content so only one copy exists, but on mobile it's
+    // injected into a different element (#mobile-detail-view) while
+    // #detail-panel's markup stays in the document. Two elements then
+    // share each id, and document.getElementById returns the first in
+    // document order -- the hidden desktop panel -- so the mobile check
+    // table and paginator would render into something invisible.
+    //
+    // Scope every lookup to the element this fragment was injected
+    // into. document.currentScript is the re-created <script> node that
+    // refreshMonitorDetail() executes (innerHTML never runs scripts, so
+    // it clones them), and this fragment's top-level nodes are direct
+    // children of the panel, making parentElement exactly the right
+    // root. Read synchronously here -- currentScript is null inside any
+    // later callback. Falls back to document for the standalone
+    // /monitor/{name} page, and per-id as a belt-and-braces guard.
+    const _root =
+        (document.currentScript && document.currentScript.parentElement) || document;
+    const byId = (id) => _root.querySelector('#' + id) || document.getElementById(id);
+    const byClass = (sel) => _root.querySelector(sel) || document.querySelector(sel);
+    {# tojson, not a quoted "{{ }}": this lands in JS-string context, where
+       Jinja's HTML autoescaping is the wrong escape entirely. A name
+       containing a backslash retargets every fetch below at a monitor that
+       doesn't exist, one ending in a backslash kills this whole script with
+       a SyntaxError, and a quote arrives as a literal &#34;. Matches how
+       display_timezone below and dashboard.html/kiosk.html already pass
+       this same value. #}
+    const monitorName = {{ monitor.name | tojson }};
+    const cs = getComputedStyle(document.documentElement);
+    const accent = cs.getPropertyValue('--text-accent').trim();
+    const muted = cs.getPropertyValue('--text-muted').trim();
+
+    // escapeHtml() comes from the shared /static/js/dashboard-common.js,
+    // already loaded by the parent page (dashboard.html/kiosk.html) before
+    // this fragment is ever injected.
+
+    // --- Hide uptime bars that don't fit container width (no partials) ---------------
+    const BAR_WIDTH = 8;
+    const BAR_GAP = 2;
+    const BAR_STEP = BAR_WIDTH + BAR_GAP;
+
+    // ---------------------------------------------------------------------------------
+    function trimDetailBars() {
+        const container = byClass('.detail-bars');
+        if (!container) return;
+        const w = container.clientWidth;
+        if (w <= 0) return;
+        const maxBars = Math.floor((w + BAR_GAP) / BAR_STEP);
+        const bars = container.querySelectorAll('.bar');
+        bars.forEach(b => b.style.display = ''); // reset
+        const hideCount = bars.length - maxBars;
+        for (let i = 0; i < hideCount; i++) {
+            bars[i].style.display = 'none'; // hide oldest (leftmost)
+        }
+    }
+
+    trimDetailBars();
+
+    // --- Response time line graph (pure Canvas, no libraries) ------------------------
+    // Data is stashed after the initial fetch so a later resize (e.g.
+    // crossing the 1366px mobile breakpoint by resizing the browser
+    // window, or rotating a tablet) can redraw at the new canvas size
+    // without re-fetching.
+    let lastGraphData = [];
+    // ---------------------------------------------------------------------------------
+    function drawGraph(data) {
+        const canvas = byId('response-graph');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+        const cssW = canvas.clientWidth || 800;
+        const cssH = canvas.clientHeight || 200;
+        canvas.width = cssW * dpr;
+        canvas.height = cssH * dpr;
+        ctx.scale(dpr, dpr);
+        const W = cssW, H = cssH;
+        ctx.clearRect(0, 0, W, H);
+
+        const padL = 58, padR = 12, padT = 20, padB = 28;
+        const plotW = W - padL - padR;
+        const plotH = H - padT - padB;
+
+        if (!data || data.length === 0) {
+            ctx.fillStyle = muted;
+            ctx.font = '13px Hack, monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(T.no_latency, W / 2, H / 2);
+            return;
+        }
+
+        const times = data.map(d => new Date(d.time).getTime());
+        const vals = data.map(d => d.response_ms);
+        const tMin = Math.min(...times), tMax = Math.max(...times);
+        const vMax = Math.max(...vals) * 1.1 || 1;
+        const tRange = tMax - tMin || 1;
+
+        ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--graph-lines').trim();
+        ctx.lineWidth = 1;
+        ctx.fillStyle = muted;
+        ctx.font = '10px Hack, monospace';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        for (let i = 0; i <= 4; i++) {
+            const y = padT + (plotH * i / 4);
+            const val = vMax - (vMax * i / 4);
+            ctx.beginPath();
+            ctx.moveTo(padL, y);
+            ctx.lineTo(W - padR, y);
+            ctx.stroke();
+            ctx.fillText(val.toFixed(0) + 'ms', padL - 10, y);
+        }
+
+        ctx.textBaseline = 'top';
+        const tz = {{ display_timezone | tojson }};
+        const fmt = ts => {
+            const dt = new Date(ts);
+            return dt.toLocaleDateString([], {month: 'short', day: 'numeric', timeZone: tz});
+        };
+
+        // Place date labels at the first data point of each new date.
+        // The first date is implied by the graph start (left edge), so skip it.
+        // Subsequent dates get a centered label, with minimum spacing to avoid clutter.
+        const dayFmt = new Intl.DateTimeFormat('en-CA', {timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit'});
+        const seenDates = new Set();
+        let lastLabelX = -Infinity;
+        data.forEach(d => {
+            const ts = new Date(d.time).getTime();
+            const dateStr = dayFmt.format(ts);
+            if (!seenDates.has(dateStr)) {
+                seenDates.add(dateStr);
+                const x = padL + ((ts - tMin) / tRange) * plotW;
+                if (seenDates.size === 1) {
+                    // Skip first date — implied by graph start
+                } else if (x - lastLabelX >= 80) {
+                    ctx.textAlign = 'center';
+                    ctx.fillText(fmt(ts), Math.max(padL + 20, Math.min(x, W - padR - 20)), H - padB + 10);
+                    lastLabelX = x;
+                }
+            }
+        });
+
+        ctx.strokeStyle = accent;
+        ctx.lineWidth = 1.5;
+        // Expected interval between checks. If the gap between consecutive
+        // data points exceeds this, break the line to indicate missing/down
+        // checks in that period.
+        const expectedGap = ({{ monitor.interval_minutes }} || 5) * 60 * 1000;
+        let drawing = false;
+        ctx.beginPath();
+        data.forEach((d, i) => {
+            const x = padL + ((new Date(d.time).getTime() - tMin) / tRange) * plotW;
+            const y = padT + plotH - (d.response_ms / vMax) * plotH;
+            if (i > 0) {
+                const prevTime = new Date(data[i - 1].time).getTime();
+                const curTime = new Date(d.time).getTime();
+                if (curTime - prevTime > expectedGap * 1.5) {
+                    // Gap detected — stop current segment
+                    drawing = false;
+                }
+            }
+            if (!drawing) {
+                ctx.moveTo(x, y);
+                drawing = true;
+            } else {
+                ctx.lineTo(x, y);
+            }
+        });
+        ctx.stroke();
+    }
+
+    fetch('/api/monitor/' + encodeURIComponent(monitorName) + '/response-times?hours=' + ({{ latency_graph_days }} * 24))
+        .then(r => r.json())
+        .then(j => { lastGraphData = j.data || []; drawGraph(lastGraphData); })
+        .catch(() => drawGraph([]));
+
+    // This whole fragment (script included) is re-injected and re-run by
+    // refreshMonitorDetail() on every confirmed state change, so a plain
+    // addEventListener here accumulates one more permanent window
+    // listener per refresh -- each holding its own closure over the
+    // now-detached canvas via drawGraph. Unbounded on a long-lived
+    // dashboard or kiosk session. Drop the previous registration (kept
+    // on window, the only thing that survives the innerHTML swap)
+    // before adding this run's.
+    let resizeTimer = null;
+    if (window._uptimeheraldDetailResize) {
+        window.removeEventListener('resize', window._uptimeheraldDetailResize);
+    }
+    window._uptimeheraldDetailResize = () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+            trimDetailBars();
+            drawGraph(lastGraphData);
+        }, 150);
+    };
+    window.addEventListener('resize', window._uptimeheraldDetailResize);
+
+    // --- Check log table with pagination ---------------------------------------------
+    function loadChecks(page) {
+        const tbody = byId('checks-tbody');
+        tbody.innerHTML = '<tr><td colspan="4" class="muted">' + T.loading + '</td></tr>';
+        fetch('/api/monitor/' + encodeURIComponent(monitorName) + '/checks?page=' + page + '&per_page=' + {{ checks_per_page }})
+            .then(r => r.json())
+            .then(data => {
+                renderChecks(data);
+            })
+            .catch(() => {
+                tbody.innerHTML = '<tr><td colspan="4" class="muted">' + T.failed_load + '</td></tr>';
+            });
+    }
+
+    // ---------------------------------------------------------------------------------
+    // Shared by both the desktop table (renderChecks) and the mobile
+    // accordion (renderChecksMobile) — same fetched check, same status/
+    // details logic either way, only the markup shape around it differs.
+    function _checkRowInfo(c) {
+        // Trust the server's stored classification (which knows about a
+        // monitor's expected_status override) rather than re-deriving it
+        // here from the raw status code -- a client-side "2xx = up" guess
+        // has no way to know a monitor might expect e.g. 401 instead.
+        // null for maintenance/inactive log rows, which aren't a real
+        // check either way.
+        const isUp = c.is_up === true;
+        const isMaintenance = c.status === 'maintenance';
+        const isInactive = c.status === 'inactive';
+        let cls;
+        if (isUp) {
+            cls = 'up';
+        } else if (isMaintenance || isInactive) {
+            cls = '';
+        } else {
+            cls = 'down';
+        }
+        let statusLabel = escapeHtml(c.status);
+        // See dashboard-common.js's twin: 'inactive' needs a
+        // translated label too, not the raw status string.
+        if (isMaintenance) statusLabel = T.maint;
+        if (isInactive) statusLabel = T.inactive;
+        let details = '';
+        if (c.details && c.details.maintenance) {
+            details = '<span style="color: var(--status-mixed);">' + T.maintenance + ' ' + escapeHtml(c.details.maintenance) + '</span>';
+        } else if (c.details && c.details.passed) {
+            const confirmColor = isUp ? 'var(--status-up)' : 'var(--status-down)';
+            details = '<span style="color: ' + confirmColor + ';">' + T.verification_confirmed + '</span>';
+        } else if (c.details && c.details.verifying) {
+            details = '<span style="color: var(--status-mixed);">' + T.verifying + '</span>';
+            if (c.error) {
+                details += ' - <span style="color: var(--status-down);">' + escapeHtml(c.error) + '</span>';
+            }
+        } else if (c.error) {
+            details = '<span style="color: var(--status-down);">' + escapeHtml(c.error) + '</span>';
+        }
+        return { cls, statusLabel, details };
+    }
+
+    // ---------------------------------------------------------------------------------
+    function renderChecks(data) {
+        const tbody = byId('checks-tbody');
+        tbody.innerHTML = '';
+        if (data.checks.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="muted">' + T.no_checks + '</td></tr>';
+        } else {
+            data.checks.forEach(c => {
+                const tr = document.createElement('tr');
+                const { cls, statusLabel, details } = _checkRowInfo(c);
+                tr.innerHTML =
+                    '<td>' + escapeHtml(c.time) + '</td>' +
+                    '<td class="' + cls + '">' + statusLabel + '</td>' +
+                    '<td>' + (c.response_ms != null ? c.response_ms.toFixed(LATENCY_DECIMALS) + 'ms' : '—') + '</td>' +
+                    '<td>' + details + '</td>';
+                tbody.appendChild(tr);
+            });
+        }
+        renderChecksMobile(data.checks);
+        renderPagination(data);
+    }
+
+    // ---------------------------------------------------------------------------------
+    // Mobile-only accordion — same fetched data as renderChecks() above,
+    // built as <details>/<summary> items instead of table rows. See
+    // _style_mobile.html for which one's actually visible.
+    function renderChecksMobile(checks) {
+        const container = byId('checks-mobile');
+        if (!container) return;
+        container.innerHTML = '';
+        if (checks.length === 0) {
+            container.innerHTML = '<div class="empty-state">' + T.no_checks + '</div>';
+            return;
+        }
+        checks.forEach(c => {
+            const { cls, statusLabel, details } = _checkRowInfo(c);
+            const item = document.createElement('details');
+            item.className = 'check-item';
+            item.innerHTML =
+                '<summary>' +
+                    '<span class="check-time">' + escapeHtml(c.time) + '</span>' +
+                    '<span class="check-status ' + (cls || 'muted') + '">' + statusLabel + '</span>' +
+                '</summary>' +
+                '<div class="check-item-body">' +
+                    '<div>' + T.latency + ': ' + (c.response_ms != null ? c.response_ms.toFixed(LATENCY_DECIMALS) + 'ms' : '—') + '</div>' +
+                    (details ? '<div>' + T.details + ': ' + details + '</div>' : '') +
+                '</div>';
+            container.appendChild(item);
+        });
+    }
+
+    // ---------------------------------------------------------------------------------
+    function renderPagination(data) {
+        const div = byId('pagination');
+        const tp = data.total_pages;
+        div.innerHTML = '';
+        const prev = document.createElement('button');
+        prev.textContent = T.prev;
+        prev.disabled = data.page <= 1;
+        prev.onclick = () => loadChecks(data.page - 1);
+        div.appendChild(prev);
+
+        const info = document.createElement('span');
+        info.className = 'page-info';
+        info.textContent = T.page_of
+            .replace('%(page)d', data.page)
+            .replace('%(total)d', tp)
+            .replace('%(count)d', data.total);
+        div.appendChild(info);
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.inputMode = 'numeric';
+        input.value = data.page;
+        input.className = 'page-input';
+        input.title = T.go_to_page;
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const p = parseInt(input.value, 10);
+                if (p >= 1 && p <= tp && p !== data.page) loadChecks(p);
+            }
+        });
+        div.appendChild(input);
+
+        const next = document.createElement('button');
+        next.textContent = T.next;
+        next.disabled = data.page >= tp;
+        next.onclick = () => loadChecks(data.page + 1);
+        div.appendChild(next);
+    }
+
+    loadChecks(1);
+})();
+</script>

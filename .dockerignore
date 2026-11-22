@@ -1,0 +1,35 @@
+# Version control
+.git
+.gitignore
+.github
+
+# Python build/cache artifacts
+__pycache__
+**/__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.egg-info
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+# Virtualenvs
+.venv
+venv
+
+# Tests — not needed inside the runtime image
+tests
+
+# Local env/secrets — never send these to the build context
+.env
+.env.*
+
+# Docs — not copied into the image
+*.md
+
+# Local dev/override artifacts
+docker-compose.override.yaml
+docker-compose.override.yml
+data
+.DS_Store

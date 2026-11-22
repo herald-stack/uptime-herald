@@ -1,0 +1,322 @@
+# English translations for Uptime Herald.
+# Copyright (C) 2026 Uptime Herald Authors
+# This file is distributed under the same license as the Uptime Herald
+# project.
+# Uptime Herald Authors <admin@uptimeherald.org>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Uptime Herald 1.0.0\n"
+"Report-Msgid-Bugs-To: admin@uptimeherald.org\n"
+"POT-Creation-Date: 2026-11-22 19:37+0000\n"
+"PO-Revision-Date: 2026-07-08 21:01-0500\n"
+"Last-Translator: Uptime Herald Authors <admin@uptimeherald.org>\n"
+"Language: en\n"
+"Language-Team: Uptime Herald Authors <admin@uptimeherald.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.17.0\n"
+
+#: src/alerts.py:54 src/alerts.py:128 src/alerts.py:351 src/alerts.py:468
+msgid "is UP"
+msgstr ""
+
+#: src/alerts.py:59 src/alerts.py:136 src/alerts.py:358 src/alerts.py:474
+msgid "is DOWN"
+msgstr ""
+
+#: src/alerts.py:64 src/alerts.py:133 src/alerts.py:141 src/alerts.py:361
+#: src/alerts.py:478
+msgid "Latency:"
+msgstr ""
+
+#: src/alerts.py:131
+#, python-brace-format
+msgid "Monitor '{name}' has recovered."
+msgstr ""
+
+#: src/alerts.py:138
+#, python-brace-format
+msgid "Monitor '{name}' is DOWN."
+msgstr ""
+
+#: src/alerts.py:140 src/alerts.py:359 src/alerts.py:476
+msgid "Error:"
+msgstr ""
+
+#: src/alerts.py:140 src/alerts.py:359
+msgid "Unknown"
+msgstr ""
+
+#: src/alerts.py:352
+msgid "Recovered"
+msgstr ""
+
+#: src/db_support.py:208
+#, python-brace-format
+msgid "{name}: upstream end of support"
+msgstr ""
+
+#: src/db_support.py:212
+#, python-brace-format
+msgid "{name} reaches upstream end of support in {days} days ({date})."
+msgstr ""
+
+#: src/db_support.py:218
+#, python-brace-format
+msgid "{name} reaches upstream end of support tomorrow ({date})."
+msgstr ""
+
+#: src/db_support.py:223
+#, python-brace-format
+msgid "{name} reaches upstream end of support today."
+msgstr ""
+
+#: src/db_support.py:228
+#, python-brace-format
+msgid ""
+"{name} reached upstream end of support on {date} ({days} days ago) and no"
+" longer receives upstream security fixes."
+msgstr ""
+
+#: src/db_support.py:234
+#, python-brace-format
+msgid "See {url} for supported versions and how to upgrade."
+msgstr ""
+
+#: src/i18n.py:198 src/templates/dashboard.html:288
+#: src/templates/kiosk.html:150 src/templates/monitor.html:131
+msgid "Loading…"
+msgstr ""
+
+#: src/i18n.py:199 src/templates/dashboard.html:190
+#: src/templates/dashboard.html:353 src/templates/kiosk.html:55
+msgid "No monitors configured."
+msgstr ""
+
+#: src/i18n.py:200
+msgid "No checks recorded"
+msgstr ""
+
+#: src/i18n.py:201 src/i18n.py:202
+msgid "Failed to load checks"
+msgstr ""
+
+#: src/i18n.py:203
+msgid "Failed to load:"
+msgstr ""
+
+#: src/i18n.py:204
+msgid "‹ PREV"
+msgstr ""
+
+#: src/i18n.py:205
+msgid "NEXT ›"
+msgstr ""
+
+#: src/i18n.py:206
+#, python-format
+msgid "PAGE %(page)d OF %(total)d (%(count)d CHECKS)"
+msgstr ""
+
+#: src/i18n.py:207 src/templates/dashboard.html:224 src/templates/kiosk.html:86
+msgid "INACTIVE"
+msgstr ""
+
+#: src/i18n.py:208
+msgid "MAINT"
+msgstr ""
+
+#: src/i18n.py:209
+msgid "Maintenance:"
+msgstr ""
+
+#: src/i18n.py:210
+msgid "Verifying Status"
+msgstr ""
+
+#: src/i18n.py:211
+msgid "Status Change Verified"
+msgstr ""
+
+#: src/i18n.py:212
+msgid "No latency data"
+msgstr ""
+
+#: src/i18n.py:213
+msgid "Go to page"
+msgstr ""
+
+#: src/i18n.py:214 src/templates/dashboard.html:283
+#: src/templates/kiosk.html:145 src/templates/monitor.html:126
+msgid "Latency"
+msgstr ""
+
+#: src/i18n.py:215 src/templates/dashboard.html:284
+#: src/templates/kiosk.html:146 src/templates/monitor.html:127
+msgid "Details"
+msgstr ""
+
+#: src/system_notice.py:65
+msgid "[Uptime Herald Notice]"
+msgstr ""
+
+#: src/templates/config_error.html:59
+msgid "Configuration Error"
+msgstr ""
+
+#: src/templates/config_error.html:62
+msgid ""
+"This page can't load until the configuration is fixed. Once it is, it "
+"will recover automatically on the next request — no restart needed."
+msgstr ""
+
+#: src/templates/dashboard.html:147 src/templates/dashboard.html:310
+msgid "All Statuses"
+msgstr ""
+
+#: src/templates/dashboard.html:148 src/templates/dashboard.html:311
+msgid "Up"
+msgstr ""
+
+#: src/templates/dashboard.html:149 src/templates/dashboard.html:312
+msgid "Down"
+msgstr ""
+
+#: src/templates/dashboard.html:150 src/templates/dashboard.html:313
+msgid "Maintenance"
+msgstr ""
+
+#: src/templates/dashboard.html:151 src/templates/dashboard.html:314
+msgid "Inactive"
+msgstr ""
+
+#: src/templates/dashboard.html:155 src/templates/dashboard.html:318
+msgid "All Types"
+msgstr ""
+
+#: src/templates/dashboard.html:163 src/templates/dashboard.html:326
+msgid "All Tags"
+msgstr ""
+
+#: src/templates/dashboard.html:169 src/templates/dashboard.html:332
+msgid "Reset filters"
+msgstr ""
+
+#: src/templates/dashboard.html:194 src/templates/dashboard.html:216
+#: src/templates/kiosk.html:59 src/templates/kiosk.html:78
+#: src/templates/monitor.html:34 src/templates/monitor.html:107
+msgid "UP"
+msgstr ""
+
+#: src/templates/dashboard.html:195 src/templates/dashboard.html:220
+#: src/templates/kiosk.html:60 src/templates/kiosk.html:82
+#: src/templates/monitor.html:38 src/templates/monitor.html:108
+msgid "DOWN"
+msgstr ""
+
+#: src/templates/dashboard.html:196 src/templates/kiosk.html:61
+#: src/templates/monitor.html:109
+msgid "MIXED"
+msgstr ""
+
+#: src/templates/dashboard.html:197 src/templates/kiosk.html:62
+#: src/templates/monitor.html:110
+msgid "NO DATA"
+msgstr ""
+
+#: src/templates/dashboard.html:198 src/templates/kiosk.html:63
+#: src/templates/monitor.html:111
+msgid "1 BAR = 1 HOUR"
+msgstr ""
+
+#: src/templates/dashboard.html:202 src/templates/dashboard.html:363
+#: src/templates/monitor.html:156
+msgid "Docs"
+msgstr ""
+
+#: src/templates/dashboard.html:203 src/templates/dashboard.html:364
+#: src/templates/monitor.html:157
+msgid "License"
+msgstr ""
+
+#: src/templates/dashboard.html:212 src/templates/kiosk.html:74
+msgid "MONITORS"
+msgstr ""
+
+#: src/templates/dashboard.html:228 src/templates/kiosk.html:90
+msgid "MAINTENANCE"
+msgstr ""
+
+#: src/templates/dashboard.html:233 src/templates/kiosk.html:95
+#: src/templates/monitor.html:51
+msgid "AVG UPTIME"
+msgstr ""
+
+#: src/templates/dashboard.html:254 src/templates/kiosk.html:116
+#: src/templates/monitor.html:72
+msgid "AVG LATENCY"
+msgstr ""
+
+#: src/templates/dashboard.html:280 src/templates/kiosk.html:142
+msgid "Monitor"
+msgstr ""
+
+#: src/templates/dashboard.html:281 src/templates/kiosk.html:143
+#: src/templates/monitor.html:125
+msgid "Status"
+msgstr ""
+
+#: src/templates/dashboard.html:282 src/templates/kiosk.html:144
+#: src/templates/monitor.html:124
+msgid "Date / Time"
+msgstr ""
+
+#: src/templates/kiosk.html:66
+msgid "Kiosk Mode"
+msgstr ""
+
+#: src/templates/monitor.html:18
+msgid "Expected status:"
+msgstr ""
+
+#: src/templates/monitor.html:27
+msgid "Monitor Stats"
+msgstr ""
+
+#: src/templates/monitor.html:30
+msgid "CHECKS"
+msgstr ""
+
+#: src/templates/monitor.html:42
+msgid "TIMEOUT"
+msgstr ""
+
+#: src/templates/monitor.html:46
+msgid "OUTAGES"
+msgstr ""
+
+#: src/templates/monitor.html:94
+msgid "Uptime"
+msgstr ""
+
+#: src/templates/monitor.html:97
+msgid "OLDER"
+msgstr ""
+
+#: src/templates/monitor.html:98
+msgid "NOW"
+msgstr ""
+
+#: src/templates/monitor.html:116
+#, python-format
+msgid "Latency (last %(count)s day)"
+msgid_plural "Latency (last %(count)s days)"
+msgstr[0] ""
+msgstr[1] ""
+
+#~ msgid "TOTAL"
+#~ msgstr ""
+

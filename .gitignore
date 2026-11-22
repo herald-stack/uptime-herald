@@ -1,0 +1,28 @@
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+.env
+data/
+config/
+backups/
+docker-compose.yaml
+docker-compose.override.yaml
+docker-compose.override.yml
+
+.coverage
+
+# A real credentials.ini holds passwords; only credentials.default.ini is tracked
+credentials.ini
+
+# The default config files and the starter compose files are not part of this
+# repository. A build that needs them copies them into this folder; keep those
+# copies out of commits.
+/alerts.default.yaml
+/config.default.yaml
+/credentials.default.ini
+/maintenance.default.yaml
+/monitors.default.yaml
+/tags.default.yaml
+/theme.default.yaml
+/deploy/

@@ -1,0 +1,645 @@
+{#
+  Uptime Herald - https://uptimeherald.org
+  Copyright (C) 2026 Uptime Herald Authors
+  SPDX-License-Identifier: AGPL-3.0-only
+
+  dashboard.html - The dashboard page.
+-#}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uptime Herald</title>
+    <link rel="icon" type="image/png" href="/static/png/uptime-herald-favicon.png">
+    <style>
+{% include "_style_common.html" %}
+{% include "_style_mobile.html" %}
+        /* Dashboard-only: this page's #detail-panel padding and check-log
+           pagination margin-top differ from kiosk.html's, so they are set
+           here as page-specific values. */
+        #detail-panel { padding: 1.5em; }
+        .check-log .pagination { margin-top: 1.5em; }
+        .sidebar-filter {
+            padding: 0.5rem 0.75rem;
+            border-bottom: 1px solid var(--border-main);
+            display: flex;
+            gap: 0.5rem;
+        }
+        .sidebar-filter select {
+            flex: 1;
+            min-width: 0;
+            background: var(--bg-input);
+            color: var(--text-main);
+            border: 1px solid var(--border-dropdown);
+            padding: 0.3rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'Hack', monospace;
+            /* 0.55em, not the original 0.75rem -- 0.75rem wrapped option
+               text onto a second line inside the open ::picker(select)
+               popup (styled just below); 0.55em is the value that
+               actually fixes it. */
+            font-size: 0.55em;
+            text-transform: uppercase;
+            cursor: pointer;
+            /* Opts into the new "customizable select" rendering mode
+               (supported by Chrome and Edge; browsers without support, such
+               as Firefox and Safari, treat this line as a no-op and render
+               their ordinary native dropdown, so it is a progressive
+               enhancement with no drawback). Without this, the
+               option-hover background below has no effect in any browser,
+               because native <option> popups aren't stylable. */
+            appearance: base-select;
+        }
+        .sidebar-filter select::picker(select) {
+            appearance: base-select;
+            /* "Minimal browser base styles" per spec once opted in --
+               without setting these explicitly, the open popup would
+               default to something like plain white/black rather than
+               matching the closed select's own theme colors above. */
+            background: var(--bg-input);
+            border: 1px solid var(--border-dropdown);
+            border-radius: 4px;
+        }
+        .sidebar-filter option {
+            color: var(--text-main);
+            padding: 0.3rem 0.5rem;
+        }
+        /* A themed highlight color for the option the user is
+           hovering/navigating to, instead of each browser's own native (often
+           blue) accent color. --border-accent, not --text-accent or
+           --link-color, despite all three sharing the same value in the
+           default theme -- it's the only one of the three already tied to an
+           interactive-hover concept (pagination hover uses it too), where the
+           other two are pure text-color concepts that only coincidentally
+           share this value right now. :focus covers keyboard arrow-key
+           navigation, not just mouse hover. */
+        .sidebar-filter option:hover,
+        .sidebar-filter option:focus {
+            background: var(--border-accent);
+            color: var(--bg-input);
+        }
+        .sidebar-filter select:focus {
+            border-color: var(--border-accent);
+            outline: none;
+        }
+        .filter-reset {
+            flex: 0 0 auto;
+            background: var(--bg-input);
+            color: var(--text-muted);
+            border: 1px solid var(--border-dropdown);
+            border-radius: 4px;
+            font-family: 'Hack', monospace;
+            font-size: 0.75rem;
+            cursor: pointer;
+            padding: 0.3rem 0.5rem;
+            line-height: 1;
+        }
+        .filter-reset:hover {
+            color: var(--text-main);
+            border-color: var(--border-accent);
+        }
+        .filter-reset:disabled {
+            opacity: 0.3;
+            cursor: default;
+        }
+        .filter-reset:disabled:hover {
+            color: var(--text-muted);
+            border-color: var(--border-dropdown);
+        }
+        .footer-links {
+            display: flex;
+            gap: 0;
+        }
+        .footer-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            padding: 0 12px;
+            border-right: 1px solid var(--text-muted);
+        }
+        .footer-links a:first-child {
+            padding-left: 0;
+        }
+        .footer-links a:last-child {
+            border-right: none;
+        }
+        .footer-links a:hover {
+            color: var(--link-color);
+            text-decoration: underline var(--link-hover-line);
+        }
+    </style>
+</head>
+<body>
+    <div class="layout">
+      <div class="sidebar">
+        <div class="sidebar-header">
+            <a href="/">{% include "_uptimeherald_logo_svg.html" %}</a>
+        </div>
+        {# The status filter and the reset button are always meaningful --
+           up/down/maintenance/inactive exist regardless of how many monitor
+           types are configured. Only the *type* select depends on
+           show_type_filter; gating the whole block on it would remove status
+           and tag filtering from the very common all-one-type deployment. #}
+        <div class="sidebar-filter">
+            <select id="status-filter" onchange="filterByStatus(this.value)">
+                <option value="all">{% filter upper %}{% trans %}All Statuses{% endtrans %}{% endfilter %}</option>
+                <option value="up">{% filter upper %}{% trans %}Up{% endtrans %}{% endfilter %}</option>
+                <option value="down">{% filter upper %}{% trans %}Down{% endtrans %}{% endfilter %}</option>
+                <option value="maintenance">{% filter upper %}{% trans %}Maintenance{% endtrans %}{% endfilter %}</option>
+                <option value="inactive">{% filter upper %}{% trans %}Inactive{% endtrans %}{% endfilter %}</option>
+            </select>
+            {% if show_type_filter %}
+            <select id="type-filter" onchange="filterByType(this.value)">
+                <option value="all">{% filter upper %}{% trans %}All Types{% endtrans %}{% endfilter %}</option>
+                {% for mtype in monitor_types %}
+                <option value="{{ mtype }}">{{ mtype | upper }}</option>
+                {% endfor %}
+            </select>
+            {% endif %}
+            {% if show_tag_filter %}
+            <select id="tag-filter" onchange="filterByTag(this.value)">
+                <option value="all">{% filter upper %}{% trans %}All Tags{% endtrans %}{% endfilter %}</option>
+                {% for tag in monitor_tags %}
+                <option value="{{ tag }}">{{ tag | upper }}</option>
+                {% endfor %}
+            </select>
+            {% endif %}
+            <button class="filter-reset" id="filter-reset" onclick="resetFilters()" title="{% trans %}Reset filters{% endtrans %}" disabled>✕</button>
+        </div>
+        <nav class="monitor-list" id="monitor-list">
+            {% if monitors %}
+                {% for m in monitors %}
+                <div class="monitor-row {{ m.health }}{{ " inactive" if not m.active else "" }}{{ " inactive" if m.in_maintenance else "" }}"
+                     data-name="{{ m.name }}"
+                     data-type="{{ m.type }}"
+                     data-status="{% if not m.active %}inactive{% elif m.in_maintenance %}maintenance{% else %}{{ m.health }}{% endif %}"
+                     data-tags="{{ m.tags | join(',') }}"
+                     onclick='selectMonitor({{ m.name | tojson }}, this)'>
+                    <div class="name-row">
+                        <div class="name">{{ m.name }}</div>
+                        <div class="uptime-pct">{% if not m.active %}INACTIVE{% elif m.in_maintenance %}MAINT{% elif m.uptime_pct is not none %}{{ ("%." ~ uptime_decimals ~ "f%%")|format(m.uptime_pct) }}{% endif %}</div>
+                    </div>
+                    <div class="row-bars">
+                        {%- for status in m.bars[:sidebar_bars] | reverse %}<div class="bar {{ status }}"></div>{% endfor -%}
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">{% trans %}No monitors configured.{% endtrans %}</div>
+            {% endif %}
+        </nav>
+        <div class="sidebar-legend">
+            <span class="legend-item"><span class="legend-swatch up"></span>{% trans %}UP{% endtrans %}</span>
+            <span class="legend-item"><span class="legend-swatch down"></span>{% trans %}DOWN{% endtrans %}</span>
+            <span class="legend-item"><span class="legend-swatch mixed"></span>{% trans %}MIXED{% endtrans %}</span>
+            <span class="legend-item"><span class="legend-swatch nodata"></span>{% trans %}NO DATA{% endtrans %}</span>
+            <span class="legend-note">{% trans %}1 BAR = 1 HOUR{% endtrans %}</span>
+        </div>
+        <div class="sidebar-footer">
+            <div class="footer-links">
+                <a href="https://uptimeherald.org/docs/">{% trans %}Docs{% endtrans %}</a>
+                <a href="https://uptimeherald.org/license/">{% trans %}License{% endtrans %}</a>
+            </div>
+            <div class="footer-version">v{{ version }}</div>
+        </div>
+      </div>
+        <main class="detail-panel" id="detail-panel">
+            <div class="agg-stats">
+                <div class="stats-clusters">
+                    <div class="stat-cluster">
+                        <h3 class="cluster-label">{% trans %}MONITORS{% endtrans %}</h3>
+                        <div class="cluster-grid">
+                            <div class="metric-card{% if agg_stats.sites_down == 0 and agg_stats.sites_up > 0 %} up{% endif %}">
+                                <div class="value" data-stat="sites_up">{{ agg_stats.sites_up }}</div>
+                                <div class="label">{% trans %}UP{% endtrans %}</div>
+                            </div>
+                            <div class="metric-card{% if agg_stats.sites_down > 0 %} down{% endif %}">
+                                <div class="value" data-stat="sites_down">{{ agg_stats.sites_down }}</div>
+                                <div class="label">{% trans %}DOWN{% endtrans %}</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="value" data-stat="sites_inactive">{{ agg_stats.sites_inactive }}</div>
+                                <div class="label">{% trans %}INACTIVE{% endtrans %}</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="value" data-stat="sites_maintenance">{{ agg_stats.sites_maintenance }}</div>
+                                <div class="label">{% trans %}MAINTENANCE{% endtrans %}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-cluster">
+                        <h3 class="cluster-label">{% trans %}AVG UPTIME{% endtrans %}</h3>
+                        <div class="cluster-grid">
+                            <div class="metric-card">
+                                <div class="value" data-stat="uptime_24h">{{ ("%." ~ uptime_decimals ~ "f")|format(agg_stats.uptime_pct["24h"]) }}%</div>
+                                <div class="label">24 Hours</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="value" data-stat="uptime_7d">{{ ("%." ~ uptime_decimals ~ "f")|format(agg_stats.uptime_pct["7d"]) }}%</div>
+                                <div class="label">7 Days</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="value" data-stat="uptime_30d">{{ ("%." ~ uptime_decimals ~ "f")|format(agg_stats.uptime_pct["30d"]) }}%</div>
+                                <div class="label">30 Days</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="value" data-stat="uptime_period">{{ ("%." ~ uptime_decimals ~ "f")|format(agg_stats.uptime_pct[stats_period_key]) }}%</div>
+                                <div class="label">{{ stats_period_days }} Days</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-cluster">
+                        <h3 class="cluster-label">{% trans %}AVG LATENCY{% endtrans %}</h3>
+                        <div class="cluster-grid">
+                            <div class="metric-card">
+                                <div class="value" data-stat="latency_24h">{{ ("%." ~ latency_decimals ~ "f")|format(agg_stats.avg_latency["24h"]) }}ms</div>
+                                <div class="label">24 Hours</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="value" data-stat="latency_7d">{{ ("%." ~ latency_decimals ~ "f")|format(agg_stats.avg_latency["7d"]) }}ms</div>
+                                <div class="label">7 Days</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="value" data-stat="latency_30d">{{ ("%." ~ latency_decimals ~ "f")|format(agg_stats.avg_latency["30d"]) }}ms</div>
+                                <div class="label">30 Days</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="value" data-stat="latency_period">{{ ("%." ~ latency_decimals ~ "f")|format(agg_stats.avg_latency[stats_period_key]) }}ms</div>
+                                <div class="label">{{ stats_period_days }} Days</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="check-log">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>{% trans %}Monitor{% endtrans %}</th>
+                            <th>{% trans %}Status{% endtrans %}</th>
+                            <th>{% trans %}Date / Time{% endtrans %}</th>
+                            <th>{% trans %}Latency{% endtrans %}</th>
+                            <th>{% trans %}Details{% endtrans %}</th>
+                        </tr>
+                    </thead>
+                    <tbody id="checks-tbody">
+                        <tr><td colspan="5" class="muted">{% trans %}Loading…{% endtrans %}</td></tr>
+                    </tbody>
+                </table>
+                <div class="pagination" id="pagination"></div>
+            </div>
+        </main>
+    </div>
+
+    {# --- Mobile build (< 1366px, see _style_mobile.html) ---
+       Structurally independent from .layout above: its own DOM, its
+       own JS (dashboard-mobile.js), sharing only visual classes/CSS
+       vars and the global filter functions/state declared in this
+       page's own inline <script> below. No aggregate/combined check
+       log here by design — mobile goes straight from the monitor list
+       to a single monitor's own detail view, nothing in between. #}
+    <div class="mobile-shell">
+        <a href="/" class="sidebar-header" onclick="return mobileGoHome();">{% include "_uptimeherald_logo_svg.html" %}</a>
+        <div class="mobile-list-view">
+            {# Same as the desktop block above: only the type select is
+               gated on show_type_filter. #}
+            <div class="sidebar-filter">
+                <select id="status-filter-mobile" onchange="filterByStatus(this.value)">
+                    <option value="all">{% filter upper %}{% trans %}All Statuses{% endtrans %}{% endfilter %}</option>
+                    <option value="up">{% filter upper %}{% trans %}Up{% endtrans %}{% endfilter %}</option>
+                    <option value="down">{% filter upper %}{% trans %}Down{% endtrans %}{% endfilter %}</option>
+                    <option value="maintenance">{% filter upper %}{% trans %}Maintenance{% endtrans %}{% endfilter %}</option>
+                    <option value="inactive">{% filter upper %}{% trans %}Inactive{% endtrans %}{% endfilter %}</option>
+                </select>
+                {% if show_type_filter %}
+                <select id="type-filter-mobile" onchange="filterByType(this.value)">
+                    <option value="all">{% filter upper %}{% trans %}All Types{% endtrans %}{% endfilter %}</option>
+                    {% for mtype in monitor_types %}
+                    <option value="{{ mtype }}">{{ mtype | upper }}</option>
+                    {% endfor %}
+                </select>
+                {% endif %}
+                {% if show_tag_filter %}
+                <select id="tag-filter-mobile" onchange="filterByTag(this.value)">
+                    <option value="all">{% filter upper %}{% trans %}All Tags{% endtrans %}{% endfilter %}</option>
+                    {% for tag in monitor_tags %}
+                    <option value="{{ tag }}">{{ tag | upper }}</option>
+                    {% endfor %}
+                </select>
+                {% endif %}
+                <button class="filter-reset" id="filter-reset-mobile" onclick="resetFilters()" title="{% trans %}Reset filters{% endtrans %}" disabled>✕</button>
+            </div>
+            <nav class="monitor-list" id="monitor-list-mobile">
+                {% if monitors %}
+                    {% for m in monitors %}
+                    <div class="monitor-row {{ m.health }}{{ " inactive" if not m.active else "" }}{{ " inactive" if m.in_maintenance else "" }}"
+                         data-name="{{ m.name }}"
+                         data-type="{{ m.type }}"
+                         data-status="{% if not m.active %}inactive{% elif m.in_maintenance %}maintenance{% else %}{{ m.health }}{% endif %}"
+                         data-tags="{{ m.tags | join(',') }}"
+                         onclick='selectMonitorMobile({{ m.name | tojson }}, this)'>
+                        <div class="name-row">
+                            <div class="name">{{ m.name }}</div>
+                            <div class="uptime-pct">{% if not m.active %}INACTIVE{% elif m.in_maintenance %}MAINT{% elif m.uptime_pct is not none %}{{ ("%." ~ uptime_decimals ~ "f%%")|format(m.uptime_pct) }}{% endif %}</div>
+                        </div>
+                        <div class="row-bars">
+                            {%- for status in m.bars | reverse %}<div class="bar {{ status }}"></div>{% endfor -%}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">{% trans %}No monitors configured.{% endtrans %}</div>
+                {% endif %}
+            </nav>
+            {# Scrolls with the rest of .mobile-list-view's content, not
+               pinned as fixed chrome. The detail view's own copy lives
+               in monitor.html, mobile-only, so it scrolls with that
+               view's content the same way rather than needing to be
+               shared/fixed chrome. #}
+            <div class="sidebar-footer">
+                <div class="footer-links">
+                    <a href="https://uptimeherald.org/docs/">{% trans %}Docs{% endtrans %}</a>
+                    <a href="https://uptimeherald.org/license/">{% trans %}License{% endtrans %}</a>
+                </div>
+                <div class="footer-version">v{{ version }}</div>
+            </div>
+        </div>
+        <main class="mobile-detail-view" id="mobile-detail-view"></main>
+    </div>
+
+    {# ?v={{ version }} busts the browser cache on every release. Without it, a
+       browser can keep serving an old cached copy of these files indefinitely
+       after a deploy, with nothing to make it check for a fresh one. #}
+    <script src="/static/js/dashboard-common.js?v={{ version }}"></script>
+    <script src="/static/js/dashboard-mobile.js?v={{ version }}"></script>
+    <script>
+    const T = {{ js_translations | tojson }};
+    const UPTIME_DECIMALS = {{ uptime_decimals }};
+    const SIDEBAR_BARS = {{ sidebar_bars }};
+    BAR_LABELS = {{ bar_labels | tojson }};
+    const LATENCY_DECIMALS = {{ latency_decimals }};
+    const CHECKS_PER_PAGE = {{ checks_per_page }};
+    const REFRESH_MINUTES = {{ ui_refresh_minutes }};
+    const REFRESH_MS = REFRESH_MINUTES * 60 * 1000;
+
+    // Track current state for refresh logic
+    let currentSelectedMonitor = null;
+    let refreshTimer = null;
+    let currentTypeFilter = 'all';
+    let currentStatusFilter = 'all';
+    let currentTagFilter = 'all';
+
+    // Snapshot of #detail-panel's server-rendered combined-view markup
+    // (aggregate stats + all-monitors check log), captured once here
+    // before any monitor is ever selected -- selectMonitor() below
+    // permanently overwrites the panel's innerHTML with a single
+    // monitor's fragment, so this is the only copy of the "nothing
+    // selected" skeleton the page ever has. Used by
+    // _showDesktopCombinedView() to restore that view on browser back
+    // without a full page reload.
+    const _defaultDetailPanelHTML = document.getElementById('detail-panel').innerHTML;
+
+    // --- Status filter ---------------------------------------------------------------
+    function filterByStatus(status) {
+        currentStatusFilter = status;
+        applyFilters();
+    }
+
+    // --- Type filter -----------------------------------------------------------------
+    function filterByType(type) {
+        currentTypeFilter = type;
+        applyFilters();
+    }
+
+    // --- Tag filter ------------------------------------------------------------------
+    function filterByTag(tag) {
+        currentTagFilter = tag;
+        applyFilters();
+    }
+
+    // ---------------------------------------------------------------------------------
+    function applyFilters() {
+        document.querySelectorAll('.monitor-row').forEach(row => {
+            const statusOK = currentStatusFilter === 'all' || (row.dataset.status || '') === currentStatusFilter;
+            const typeOK = currentTypeFilter === 'all' || (row.dataset.type || '') === currentTypeFilter;
+            const rowTags = (row.dataset.tags || '').split(',').filter(t => t);
+            const tagOK = currentTagFilter === 'all' || rowTags.includes(currentTagFilter);
+            row.style.display = (statusOK && typeOK && tagOK) ? '' : 'none';
+        });
+        updateResetButton();
+    }
+
+    // ---------------------------------------------------------------------------------
+    function updateResetButton() {
+        const allDefault = currentStatusFilter === 'all' && currentTypeFilter === 'all' && currentTagFilter === 'all';
+        ['filter-reset', 'filter-reset-mobile'].forEach(id => {
+            const btn = document.getElementById(id);
+            if (btn) btn.disabled = allDefault;
+        });
+        // Keep both control sets' displayed values in sync — only one is
+        // ever visible at a time (see _style_mobile.html's breakpoint),
+        // but a live window resize across it should never reveal a
+        // dropdown showing a stale selection.
+        const sync = (id, value) => { const el = document.getElementById(id); if (el) el.value = value; };
+        sync('status-filter', currentStatusFilter);
+        sync('status-filter-mobile', currentStatusFilter);
+        {% if show_type_filter %}
+        sync('type-filter', currentTypeFilter);
+        sync('type-filter-mobile', currentTypeFilter);
+        {% endif %}
+        {% if show_tag_filter %}
+        sync('tag-filter', currentTagFilter);
+        sync('tag-filter-mobile', currentTagFilter);
+        {% endif %}
+    }
+
+    // ---------------------------------------------------------------------------------
+    function applyTypeFilter() {
+        applyFilters();
+    }
+
+    // --- Reset all filters -----------------------------------------------------------
+    function resetFilters() {
+        currentStatusFilter = 'all';
+        currentTypeFilter = 'all';
+        currentTagFilter = 'all';
+        document.querySelectorAll('#status-filter, #status-filter-mobile{% if show_type_filter %}, #type-filter, #type-filter-mobile{% endif %}{% if show_tag_filter %}, #tag-filter, #tag-filter-mobile{% endif %}').forEach(el => el.value = 'all');
+        applyFilters();
+    }
+
+    // --- Auto-refresh cycle ----------------------------------------------------------
+    function autoRefresh() {
+        fetch('/api/status')
+            // Check r.ok before decoding: /api/status answers a broken
+            // config with a 503 and an {detail: ...} body rather than
+            // fabricating an empty monitor list, so decoding it as a
+            // normal payload would paint 0 monitors and 0.00% uptime
+            // over a live dashboard. Falling into .catch() instead
+            // leaves the last known-good display on screen.
+            .then(r => {
+                if (!r.ok) throw new Error('/api/status returned ' + r.status);
+                return r.json();
+            })
+            .then(data => {
+                updateMonitorList(data.monitors, data.bar_labels);
+                updateAggStats(data.agg_stats);
+
+                // Refresh detail view silently (no loading flash)
+                if (currentSelectedMonitor) {
+                    const m = data.monitors.find(m => m.name === currentSelectedMonitor);
+                    // Skip detail refresh unless the monitor's state_changed flag is true
+                    if (m && !m.state_changed) {
+                        // No state change — skip panel replacement entirely
+                    } else {
+                        refreshMonitorDetail(currentSelectedMonitor);
+                    }
+                } else {
+                    // Refresh default check log (page 1 only if on page 1) —
+                    // quietly: no visible reload unless something's actually
+                    // different, same principle as the state_changed gate above.
+                    const pageInput = document.querySelector('.page-input');
+                    const currentPage = pageInput ? parseInt(pageInput.value, 10) : 1;
+                    if (currentPage === 1) {
+                        loadChecksQuiet(1);
+                    }
+                }
+            })
+            .catch(err => {
+                // Silent fail — don't disrupt the UI
+                console.warn('Auto-refresh failed:', err);
+            });
+    }
+
+    // ---------------------------------------------------------------------------------
+    function startAutoRefresh() {
+        if (REFRESH_MS <= 0) return;  // 0 = disabled
+        if (refreshTimer) clearInterval(refreshTimer);
+        refreshTimer = setInterval(autoRefresh, REFRESH_MS);
+    }
+
+    // --- Back button: return to the combined view ------------------------------------
+    //
+    // Selecting a monitor is a fetch() + innerHTML swap, never a real
+    // page navigation, so without pushing a history entry the browser
+    // has nothing of ours to land "back" on -- it falls straight
+    // through to whatever page was open before the dashboard, taking
+    // the user out of the site entirely instead of back to the
+    // combined view. Same approach as the mobile back button (see
+    // dashboard-mobile.js); less obvious here since both panes are always
+    // on screen at once, so there's no "navigating into a view" feeling the
+    // way there is on mobile.
+    function _showDesktopCombinedView() {
+        const panel = document.getElementById('detail-panel');
+        panel.innerHTML = _defaultDetailPanelHTML;
+        document.querySelectorAll('.monitor-row').forEach(r => r.classList.remove('selected'));
+        currentSelectedMonitor = null;
+        // The restored skeleton's numbers/checks are a stale snapshot
+        // from page load -- refresh with live data the same way
+        // autoRefresh() already does, rather than showing outdated
+        // stats until the next scheduled refresh tick.
+        fetch('/api/status')
+            .then(r => r.json())
+            .then(data => updateAggStats(data.agg_stats))
+            .catch(() => {});
+        loadChecks(1);
+    }
+
+    // ---------------------------------------------------------------------------------
+    // Actually fetches and renders a monitor's detail fragment into
+    // #detail-panel -- the part selectMonitor() and popstate's
+    // forward-navigation case both need, factored out so history
+    // bookkeeping (which differs between them: a click always
+    // push/replaces, forward navigation must NOT push again or it'd
+    // corrupt the stack it's already replaying) lives only in its one
+    // caller each, not duplicated alongside the actual fetch/render.
+    // rowEl is optional -- a real click always has one (the row that
+    // was clicked); forward navigation doesn't have a click event to
+    // take it from, so it's looked up by the row's data-name instead.
+    function _renderMonitorDetail(name, rowEl) {
+        currentSelectedMonitor = name;
+        const panel = document.getElementById('detail-panel');
+        document.querySelectorAll('.monitor-row').forEach(r => r.classList.remove('selected'));
+        const targetRow = rowEl
+            || document.querySelector('.sidebar .monitor-row[data-name="' + CSS.escape(name) + '"]');
+        if (targetRow) targetRow.classList.add('selected');
+
+        panel.innerHTML = '<div class="empty-state">' + T.loading + '</div>';
+
+        fetch('/monitor/' + encodeURIComponent(name))
+            .then(r => {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.text();
+            })
+            .then(html => {
+                panel.innerHTML = html;
+                // Scripts injected via innerHTML don't execute —
+                // manually re-run them
+                panel.querySelectorAll('script').forEach(old => {
+                    const s = document.createElement('script');
+                    if (old.src) s.src = old.src;
+                    else s.textContent = old.textContent;
+                    old.parentNode.replaceChild(s, old);
+                });
+            })
+            .catch(err => {
+                panel.innerHTML = '<div class="empty-state">' + T.failed_monitor + ' ' + err.message + '</div>';
+            });
+    }
+
+    window.addEventListener('popstate', (event) => {
+        // Scoped to only act while .layout is actually the visible
+        // build -- see dashboard-mobile.js's own popstate listener for
+        // why both files guard this way instead of assuming they're
+        // the only one listening.
+        const layout = document.querySelector('.layout');
+        if (!layout || getComputedStyle(layout).display === 'none') return;
+        if (!event.state || !event.state.desktopDetail) {
+            _showDesktopCombinedView();
+        } else if (event.state.desktopDetail !== currentSelectedMonitor) {
+            // Forward navigation landing back on a previously-viewed
+            // monitor's detail state (or a multi-step back landing on
+            // one, though in practice there's only ever at most one
+            // desktopDetail entry per session -- selectMonitor()
+            // below replaces rather than stacks when switching
+            // monitors directly). No history.pushState here: this IS
+            // the history replaying itself, pushing again would
+            // corrupt the very stack this listener is responding to.
+            _renderMonitorDetail(event.state.desktopDetail);
+        }
+    });
+
+    // --- Monitor selection (updated to track state) ----------------------------------
+    function selectMonitor(name, rowEl) {
+        const alreadyShowingDetail = currentSelectedMonitor !== null;
+
+        // One history entry represents "a monitor's detail is showing
+        // in #detail-panel", regardless of which monitor. Switching
+        // directly between monitors replaces that entry instead of
+        // stacking a new one, so a single back press from anywhere in
+        // detail view returns straight to the combined view, not
+        // through every previously-viewed monitor one at a time.
+        if (alreadyShowingDetail) {
+            history.replaceState({desktopDetail: name}, '');
+        } else {
+            history.pushState({desktopDetail: name}, '');
+        }
+
+        _renderMonitorDetail(name, rowEl);
+    }
+
+    // --- Initialise ------------------------------------------------------------------
+    trimRowBars();
+    applyBarTitles();
+    let resizeTimer = null;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(trimRowBars, 150);
+    });
+
+    loadChecks(1);
+    startAutoRefresh();
+    </script>
+</body>
+</html>

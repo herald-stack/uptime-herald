@@ -15,9 +15,12 @@ No user accounts. No monthly fees. Deploy with Docker. Configure with YAML files
   CallMeBot (WhatsApp, Signal, and Facebook Messenger), or any webhook that accepts JSON.
 - Sends alerts for every monitor or only for the tags you pick.
 - Pauses checks during planned maintenance windows.
-- Shows every monitor, its history, and its response times on a dashboard you can theme.
+- Shows every monitor, its history, and its response times on a dashboard you can theme,
+  with a mobile layout and a kiosk page that rotates through your monitors.
 - Stores its data in MariaDB or PostgreSQL, either in the included Docker Compose setup or
   in a database you already run.
+- Runs on x86-64/AMD64 and ARM64, with a native container image for each. Docker pulls the
+  right one for your machine.
 
 ## Design
 

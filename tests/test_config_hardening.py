@@ -81,25 +81,40 @@ def test_a_monitor_number_that_is_not_finite_is_rejected(tmp_path, field):
         _load(tmp_path, monitors=[{**_HTTP, field: float("nan")}])
 
 
-@pytest.mark.parametrize("field", ["alert_retries", "checks_per_page"])
-def test_a_fraction_is_rejected_where_a_whole_number_is_needed(tmp_path, field):
-    """A fraction is rejected: alert_retries of 1.5 would break at the first
-    outage (range(1, 2.5)), and checks_per_page of 1.5 would make the check
-    log's own request fail."""
+_WHOLE_GLOBALS = [
+    "check_interval_minutes", "stagger_seconds", "retention_days", "stats_period_days",
+    "alert_cooldown_minutes", "ui_refresh_minutes", "latency_graph_days",
+    "checks_per_page", "kiosk_refresh_minutes", "alert_retries",
+    "retry_interval_minutes", "cleanup_grace_minutes", "timeout",
+]
+_WHOLE_MONITORS = [
+    "check_interval_minutes", "retention_days", "alert_retries",
+    "retry_interval_minutes", "alert_cooldown_minutes", "timeout",
+]
+
+
+@pytest.mark.parametrize("value", [1.5, 2.0])
+@pytest.mark.parametrize("field", _WHOLE_GLOBALS)
+def test_a_global_number_written_with_a_decimal_point_is_rejected(tmp_path, field, value):
+    """Every numeric setting is a whole number. 1.5 would break range(1, 2.5)
+    for the retries and make the check log's own request fail, and 2.0 is
+    refused with it because it is written as a real number."""
     with pytest.raises(ConfigError, match=rf"'global.{field}'.*whole number"):
-        _load(tmp_path, global_={field: 1.5})
+        _load(tmp_path, global_={field: value})
 
 
-def test_a_monitor_alert_retries_fraction_is_rejected(tmp_path):
-    with pytest.raises(ConfigError, match=r"monitors\[M\].alert_retries'.*whole number"):
-        _load(tmp_path, monitors=[{**_HTTP, "alert_retries": 1.5}])
+@pytest.mark.parametrize("value", [1.5, 2.0])
+@pytest.mark.parametrize("field", _WHOLE_MONITORS)
+def test_a_monitor_number_written_with_a_decimal_point_is_rejected(tmp_path, field, value):
+    with pytest.raises(ConfigError, match=rf"monitors\[M\].{field}'.*whole number"):
+        _load(tmp_path, monitors=[{**_HTTP, field: value}])
 
 
-def test_a_whole_number_written_with_a_point_is_accepted_as_a_whole_number(tmp_path):
-    config = _load(tmp_path, global_={"alert_retries": 3.0, "checks_per_page": "40"})
-    assert config["global"]["alert_retries"] == 3
-    assert isinstance(config["global"]["alert_retries"], int)
+def test_a_whole_number_as_text_is_accepted_and_text_with_a_point_is_not(tmp_path):
+    config = _load(tmp_path, global_={"checks_per_page": "40"})
     assert config["global"]["checks_per_page"] == 40
+    with pytest.raises(ConfigError, match=r"'global.timeout'.*whole number"):
+        _load(tmp_path, global_={"timeout": "10.0"})
 
 
 @pytest.mark.parametrize("field,ceiling", [

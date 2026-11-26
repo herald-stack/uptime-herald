@@ -128,6 +128,11 @@ def build_context(tmp_path_factory):
     for real_name, default_name in _CONFIG_FILES.items():
         shutil.copy(ctx / default_name, ctx / "config" / real_name)
     shutil.copy(ctx / "docker-compose-mariadb.yaml", ctx / "docker-compose.yaml")
+    # The compose file has no defaults for these, so a .env supplies them, as a user's would.
+    (ctx / ".env").write_text(
+        "MARIADB_ROOT_PASSWORD=changeme\nDB_NAME=uptimeherald\n"
+        "DB_USER=uptimeherald\nDB_PASSWORD=uptimeherald\n"
+    )
     return ctx
 
 

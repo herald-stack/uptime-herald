@@ -6,9 +6,9 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Uptime Herald 1.0.0\n"
+"Project-Id-Version: Uptime Herald 1.0.1\n"
 "Report-Msgid-Bugs-To: admin@uptimeherald.org\n"
-"POT-Creation-Date: 2026-11-22 19:37+0000\n"
+"POT-Creation-Date: 2026-11-26 03:01+0000\n"
 "PO-Revision-Date: 2026-07-08 21:01-0500\n"
 "Last-Translator: Uptime Herald Authors <admin@uptimeherald.org>\n"
 "Language: en\n"
@@ -17,7 +17,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.17.0\n"
+"Generated-By: Babel 2.18.0\n"
 
 #: src/alerts.py:54 src/alerts.py:128 src/alerts.py:351 src/alerts.py:468
 msgid "is UP"

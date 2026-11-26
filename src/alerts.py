@@ -43,7 +43,7 @@ def _build_markdown_alert_text(
     expected_status: int | None = None,
 ) -> str:
     """Build the up/down message body shared by discord, mattermost,
-    rocket.chat, slack, and telegram. They differ only in bold-marker style
+    rocketchat, slack, and telegram. They differ only in bold-marker style
     (`**` vs `*`) and code-fence formatting, which are parameters here, so all
     five channels stay in sync."""
     if is_up(status, expected_status):
@@ -181,7 +181,7 @@ async def send_push_alert(
     Each channel dict has a 'type' field that determines the delivery method:
     - discord: Discord webhook (content field)
     - mattermost: Mattermost webhook (text field, markdown)
-    - rocket.chat: Rocket.Chat webhook (text field, markdown)
+    - rocketchat (or rocket.chat): Rocket.Chat webhook (text field, markdown)
     - slack: Slack webhook (text field, Slack markup)
     - telegram: Telegram Bot API (chat_id + text)
     - ntfy: ntfy notification service (self-hosted or ntfy.sh)
@@ -210,7 +210,7 @@ async def send_push_alert(
             channel, monitor_name, status, error, response_ms, t, expected_status
         )
 
-    # Webhook-based channels (discord, mattermost, rocket.chat, slack, generic)
+    # Webhook-based channels (discord, mattermost, rocketchat, slack, generic)
     url = channel["url"]
 
     # Declared up front: the per-channel branches below build different
@@ -224,7 +224,7 @@ async def send_push_alert(
             bold="**", multiline_fence=False, expected_status=expected_status,
         )
         payload = {"content": content}
-    elif channel_type in ("mattermost", "rocket.chat"):
+    elif channel_type in ("mattermost", "rocketchat", "rocket.chat"):
         text = _build_markdown_alert_text(
             monitor_name, status, error, response_ms, t,
             bold="**", multiline_fence=True, expected_status=expected_status,
@@ -661,7 +661,7 @@ async def dispatch_alerts(
     if repeat_after is not None and not reminder_due(state, repeat_after):
         return
 
-    # Push alerts (discord, mattermost, rocket.chat, slack, telegram, ntfy,
+    # Push alerts (discord, mattermost, rocketchat, slack, telegram, ntfy,
     # callmebot, generic)
     monitor_tags = set(monitor_config.get("tags", [])) if monitor_config else set()
 

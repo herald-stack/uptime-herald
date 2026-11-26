@@ -293,13 +293,15 @@ async def test_send_push_alert_mattermost():
 
 
 @pytest.mark.asyncio
-async def test_send_push_alert_rocket_chat():
-    """Rocket.Chat shares Mattermost's payload shape and formatting."""
+@pytest.mark.parametrize("channel_type", ["rocketchat", "rocket.chat"])
+async def test_send_push_alert_rocket_chat(channel_type):
+    """Rocket.Chat shares Mattermost's payload shape and formatting. Both
+    spellings of the type work."""
     with patch("src.alerts.httpx.AsyncClient.post") as mock_post:
         mock_post.return_value.status_code = 200
 
         await send_push_alert(
-            channel={"type": "rocket.chat", "url": "http://example.com/rchook"},
+            channel={"type": channel_type, "url": "http://example.com/rchook"},
             monitor_name="test-monitor",
             status="down",
             error="Connection refused",

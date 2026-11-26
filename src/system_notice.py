@@ -108,6 +108,7 @@ async def _send_email(
 _TEXT_WEBHOOKS = {
     "discord": ("content", "**"),
     "mattermost": ("text", "**"),
+    "rocketchat": ("text", "**"),
     "rocket.chat": ("text", "**"),
     "slack": ("text", "*"),
 }

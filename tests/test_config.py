@@ -975,7 +975,7 @@ def test_ping_count_up_to_timeout_is_accepted(tmp_path, count, timeout):
 @pytest.mark.parametrize("count,timeout", [
     (11, None),   # the default timeout is 10
     (5, 4),
-    (3, 2.5),
+    (3, 2),
     (20, 10),
 ])
 def test_ping_count_above_timeout_is_rejected(tmp_path, count, timeout):
@@ -1818,8 +1818,10 @@ def test_language_without_a_locales_folder_is_rejected(tmp_path, value):
 @pytest.mark.parametrize("value", [
     "me@example.com", "a.b+tag@sub.example.co.uk", "O'Neil@example.com",
     "x_y-z@my-host.example.org",
-    # The longest allowed: 64 + "@" + 255 = 320 characters.
-    "x" * 64 + "@" + ".".join(["a" * 63] * 3 + ["b" * 63]),
+    # The longest allowed: 64 + "@" + 189 = 254 characters.
+    "x" * 64 + "@" + ".".join(["a" * 63] * 2 + ["b" * 61]),
+    # A domain of 252 characters, the longest that fits in 254.
+    "x@" + ".".join(["a" * 63] * 3 + ["b" * 60]),
 ])
 def test_contact_email_valid_addresses_are_accepted(tmp_path, value):
     (tmp_path / "config.yaml").write_text(f'global:\n  contact_email: "{value}"\n')
@@ -1839,6 +1841,7 @@ def test_contact_email_unset_is_accepted(tmp_path):
     "m\u00e9@example.com", "me@-example.com", "me@[192.0.2.1]", "",
     "me`id`@example.com", "me|cat@example.com",
     "x" * 64 + "@" + ".".join(["a" * 63] * 4) + ".com",
+    "x" * 64 + "@" + ".".join(["a" * 63] * 2 + ["b" * 62]),  # 255 characters
     "x" * 65 + "@example.com",
 ])
 def test_contact_email_other_values_are_rejected(tmp_path, value):
@@ -1864,7 +1867,7 @@ def test_contact_email_with_a_newline_is_rejected(tmp_path):
         load_config(str(tmp_path / "config.yaml"))
 
 
-@pytest.mark.parametrize("value", [0, -5, 0.5])
+@pytest.mark.parametrize("value", [0, -5])
 def test_monitor_timeout_below_1_is_rejected(tmp_path, value):
     path = _write_retention_config(
         tmp_path, "  stats_period_days: 90\n", f"    timeout: {value}\n"
@@ -1873,7 +1876,7 @@ def test_monitor_timeout_below_1_is_rejected(tmp_path, value):
         load_config(path)
 
 
-@pytest.mark.parametrize("value", [1, 10, 2.5])
+@pytest.mark.parametrize("value", [1, 10, 30])
 def test_monitor_timeout_of_1_or_more_is_accepted(tmp_path, value):
     path = _write_retention_config(
         tmp_path, "  stats_period_days: 90\n", f"    timeout: {value}\n"
@@ -1935,13 +1938,13 @@ def test_global_timeout_defaults_to_10(tmp_path):
     assert config["global"]["timeout"] == 10
 
 
-@pytest.mark.parametrize("value", [1, 2.5, 300])
+@pytest.mark.parametrize("value", [1, 2, 300])
 def test_global_timeout_in_range_is_accepted(tmp_path, value):
     config = load_config(_write_timeout_config(tmp_path, value))
     assert config["global"]["timeout"] == value
 
 
-@pytest.mark.parametrize("value", [0, -1, 0.5])
+@pytest.mark.parametrize("value", [0, -1])
 def test_global_timeout_below_1_is_rejected(tmp_path, value):
     with pytest.raises(ConfigError, match="global.timeout.*at least 1"):
         load_config(_write_timeout_config(tmp_path, value))
@@ -2512,6 +2515,7 @@ def test_bad_push_alert_channel_is_rejected(tmp_path, channel, expected):
     {"type": "callmebot", "phone": "+15551234567", "api_key": "k", "channel": "whatsapp"},
     {"type": "callmebot", "phone": "+15551234567", "api_key": "k", "channel": "signal"},
     {"type": "callmebot", "api_key": "k", "channel": "facebook"},
+    {"type": "rocketchat", "url": "https://x"},
     {"type": "rocket.chat", "url": "https://x"},
     {"type": "generic", "url": "https://x"},
     {"type": "slack", "url": "https://hooks.slack.com/services/T000/B000/XXXX"},

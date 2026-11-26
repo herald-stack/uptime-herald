@@ -26,7 +26,7 @@ from src.config_keys import find_unknown_settings
 from src.hostnames import to_dns_name
 from src.i18n import DOMAIN, LOCALES_DIR
 
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 
 logger = logging.getLogger(__name__)
 
@@ -168,11 +168,12 @@ _NUMERIC_MONITOR_FIELDS = (
 _DECIMAL_FIELDS = ("uptime_decimals", "latency_decimals")
 _MAX_DECIMALS = 6
 
-# Settings that count whole things: a retry or a row cannot be 1.5. A fraction
-# would break range(1, 2.5) for the retries, and the dashboard rejects a
-# ?per_page=1.5 request (422) for the check log.
-_WHOLE_GLOBAL_FIELDS = ("alert_retries", "checks_per_page")
-_WHOLE_MONITOR_FIELDS = ("alert_retries",)
+# Every numeric setting is a whole number. A fraction would break range(1, 2.5)
+# for the retries, and the dashboard rejects a ?per_page=1.5 request (422) for
+# the check log. The rest are refused for the same reason, so no setting has to
+# be explained as accepting some numbers and not others.
+_WHOLE_GLOBAL_FIELDS = _NUMERIC_GLOBAL_FIELDS
+_WHOLE_MONITOR_FIELDS = _NUMERIC_MONITOR_FIELDS
 
 # Maximums for these settings. Above them a value is a typo, or means "never":
 # a check every 1000000000000 minutes is no check at all, and alert_retries of
@@ -298,15 +299,14 @@ def _require_finite(number, field_label):
 
 # --------------------------------------------------------------------------------------
 def _require_whole(number, field_label):
-    """A setting that counts things (retries, rows) has to be a whole number.
-    2.0 is accepted as 2; 1.5 is not, because it would break the loop or the
-    page request that uses it."""
+    """A numeric setting has to be a whole number, written without a decimal
+    point. 2.0 is refused as well as 1.5, because it is written as a real
+    number."""
     if isinstance(number, float):
-        if not number.is_integer():
-            raise ConfigError(
-                f"'{field_label}' must be a whole number, got {number}"
-            )
-        return int(number)
+        raise ConfigError(
+            f"'{field_label}' must be a whole number written without a "
+            f"decimal point, got {number}"
+        )
     return number
 
 
@@ -409,7 +409,8 @@ def _validate_language(config: dict) -> None:
 # addresses are not accepted. The backtick and the pipe are legal in the
 # RFC but left out on purpose: they mean something to a shell, and the
 # value is not worth the risk. Limits: 64 for the local part, 63 per
-# label, 255 for the domain, 320 overall.
+# label, 254 overall (the most a mail server accepts, which leaves a domain of
+# at most 252).
 _EMAIL_ATOM = r"[A-Za-z0-9!#$%&'*+/=?^_{}~-]+"
 _EMAIL_LABEL = r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
 _EMAIL_RE = re.compile(
@@ -420,12 +421,10 @@ _EMAIL_RE = re.compile(
 
 # --------------------------------------------------------------------------------------
 def _is_email_address(value) -> bool:
-    if not isinstance(value, str) or len(value) > 320:
+    if not isinstance(value, str) or len(value) > 254:
         return False
     match = _EMAIL_RE.fullmatch(value)
-    return bool(
-        match and len(match["local"]) <= 64 and len(match["domain"]) <= 255
-    )
+    return bool(match and len(match["local"]) <= 64)
 
 
 # --------------------------------------------------------------------------------------
@@ -1921,7 +1920,8 @@ _REQUIRED_CHANNEL_FIELDS = {
     "callmebot": (),  # depends on the `channel`, see _CALLMEBOT_CHANNEL_FIELDS
     "discord": ("url",),
     "mattermost": ("url",),
-    "rocket.chat": ("url",),
+    "rocketchat": ("url",),
+    "rocket.chat": ("url",),  # the earlier spelling, still accepted
     "slack": ("url",),
     "generic": ("url",),
 }

@@ -15,18 +15,14 @@ services:
     environment:
       - SMTP_USER=${SMTP_USER:-}
       - SMTP_PASSWORD=${SMTP_PASSWORD:-}
-      # WARNING: DB_USER/DB_PASSWORD (and MARIADB_ROOT_PASSWORD below)
-      # default to insecure, well-known values (uptimeherald/uptimeherald,
-      # changeme). These are fine for local/trusted-network use only.
-      # For any production or internet-reachable deployment, override
-      # them via a .env file or real environment variables — do not
-      # run with the defaults.
+      # DB_NAME, DB_USER, DB_PASSWORD, and the root password below have no
+      # defaults. Copy mariadb.env.example to .env and fill them in.
       - DB_BACKEND=mariadb
       - DB_HOST=${DB_HOST:-mariadb}
       - DB_PORT=${DB_PORT:-3306}
-      - DB_NAME=${DB_NAME:-uptimeherald}
-      - DB_USER=${DB_USER:-uptimeherald}
-      - DB_PASSWORD=${DB_PASSWORD:-uptimeherald}
+      - DB_NAME=${DB_NAME:?Set DB_NAME in .env}
+      - DB_USER=${DB_USER:?Set DB_USER in .env}
+      - DB_PASSWORD=${DB_PASSWORD:?Set DB_PASSWORD in .env}
       - DB_POOL_MIN_SIZE=${DB_POOL_MIN_SIZE:-1}
       - DB_POOL_MAX_SIZE=${DB_POOL_MAX_SIZE:-5}
     depends_on:
@@ -53,12 +49,10 @@ services:
     volumes:
       - mariadb-data:/var/lib/mysql
     environment:
-      # WARNING: insecure default credentials — see the warning above
-      # the app service's DB_* variables. Override in production.
-      - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD:-changeme}
-      - MARIADB_DATABASE=${DB_NAME:-uptimeherald}
-      - MARIADB_USER=${DB_USER:-uptimeherald}
-      - MARIADB_PASSWORD=${DB_PASSWORD:-uptimeherald}
+      - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD:?Set MARIADB_ROOT_PASSWORD in .env}
+      - MARIADB_DATABASE=${DB_NAME:?Set DB_NAME in .env}
+      - MARIADB_USER=${DB_USER:?Set DB_USER in .env}
+      - MARIADB_PASSWORD=${DB_PASSWORD:?Set DB_PASSWORD in .env}
       # Runs mariadb-upgrade automatically against an existing data
       # directory whenever this image's version is newer than what
       # last wrote it -- a no-op on a fresh volume or an unchanged

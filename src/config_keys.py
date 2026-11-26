@@ -62,6 +62,7 @@ PUSH_COMMON_KEYS = ("type", "enabled", "monitors", "tags", "system")
 PUSH_TYPE_KEYS = {
     "discord": ("url",),
     "mattermost": ("url",),
+    "rocketchat": ("url",),
     "rocket.chat": ("url",),
     "slack": ("url",),
     "generic": ("url",),
